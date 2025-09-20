@@ -1,0 +1,16 @@
+C:\Users\marco\OneDrive\Projects\zg\backend\src\main\java\br\corp\shortener\exceptions\GlobalExceptionHandler.java
+C:\Users\marco\OneDrive\Projects\zg\backend\src\main\java\br\corp\shortener\controllers\LinkController.java
+C:\Users\marco\OneDrive\Projects\zg\backend\src\main\java\br\corp\shortener\exceptions\DuplicateCodeException.java
+C:\Users\marco\OneDrive\Projects\zg\backend\src\main\java\br\corp\shortener\dto\ErrorResponse.java
+C:\Users\marco\OneDrive\Projects\zg\backend\src\main\java\br\corp\shortener\dto\StatsResponse.java
+C:\Users\marco\OneDrive\Projects\zg\backend\src\main\java\br\corp\shortener\repositories\ShortUrlAccessRepository.java
+C:\Users\marco\OneDrive\Projects\zg\backend\src\main\java\br\corp\shortener\entities\ShortUrl.java
+C:\Users\marco\OneDrive\Projects\zg\backend\src\main\java\br\corp\shortener\dto\ShortenRequest.java
+C:\Users\marco\OneDrive\Projects\zg\backend\src\main\java\br\corp\shortener\controllers\StatsController.java
+C:\Users\marco\OneDrive\Projects\zg\backend\src\main\java\br\corp\shortener\dto\ValidationErrorResponse.java
+C:\Users\marco\OneDrive\Projects\zg\backend\src\main\java\br\corp\shortener\dto\RankingItem.java
+C:\Users\marco\OneDrive\Projects\zg\backend\src\main\java\br\corp\shortener\entities\ShortUrlAccess.java
+C:\Users\marco\OneDrive\Projects\zg\backend\src\main\java\br\corp\shortener\dto\ShortenResponse.java
+C:\Users\marco\OneDrive\Projects\zg\backend\src\main\java\br\corp\shortener\services\UrlShortenerService.java
+C:\Users\marco\OneDrive\Projects\zg\backend\src\main\java\br\corp\shortener\UrlShortenerApplication.java
+C:\Users\marco\OneDrive\Projects\zg\backend\src\main\java\br\corp\shortener\repositories\ShortUrlRepository.java
