@@ -2,16 +2,16 @@ spring:
   application:
     name: url-shortener
   datasource:
-    url: jdbc:postgresql://localhost:5432/encurtadorURL
-    username: postgres
-    password: admin
+    url: ${SPRING_DATASOURCE_URL:jdbc:postgresql://localhost:5432/encurtadorURL}
+    username: ${SPRING_DATASOURCE_USERNAME:postgres}
+    password: ${SPRING_DATASOURCE_PASSWORD:admin}
   jpa:
     hibernate:
       ddl-auto: update
     database-platform: org.hibernate.dialect.PostgreSQLDialect
     show-sql: true
     open-in-view: false
-    flyway:
+  flyway:
     enabled: true
     baseline-on-migrate: true
     baseline-version: 0
@@ -29,3 +29,13 @@ spring:
     throw-exception-if-no-handler-found: true
 server:
   port: 8080
+management:
+  endpoints:
+    web:
+      exposure:
+        include: "health,info,metrics"
+  endpoint:
+    health:
+      probes:
+        enabled: true
+      show-details: never

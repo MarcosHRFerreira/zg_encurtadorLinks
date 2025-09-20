@@ -7,6 +7,7 @@ import br.corp.shortener.exceptions.DuplicateCodeException;
 import br.corp.shortener.repositories.ShortUrlAccessRepository;
 import br.corp.shortener.repositories.ShortUrlRepository;
 import lombok.RequiredArgsConstructor;
+import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -28,18 +29,38 @@ public class UrlShortenerService {
 
     @Transactional
     public ShortUrl shorten(String originalUrl, String customCode) {
-        String code = customCode != null ? customCode : generateUniqueCode();
-
-        if (shortUrlRepository.existsByCode(code)) {
-            throw new DuplicateCodeException(code);
+        if (customCode != null) {
+            if (shortUrlRepository.existsByCode(customCode)) {
+                throw new DuplicateCodeException(customCode);
+            }
+            final ShortUrl candidate = ShortUrl.builder()
+                    .originalUrl(originalUrl)
+                    .code(customCode)
+                    .createdAt(Instant.now())
+                    .build();
+            try {
+                return shortUrlRepository.saveAndFlush(candidate);
+            } catch (DataIntegrityViolationException e) {
+                // Corrida entre instâncias: mapeia para 409
+                throw new DuplicateCodeException(customCode);
+            }
         }
 
-        ShortUrl shortUrl = ShortUrl.builder()
-                .originalUrl(originalUrl)
-                .code(code)
-                .createdAt(Instant.now())
-                .build();
-        return shortUrlRepository.save(shortUrl);
+        final int maxAttempts = 5;
+        for (int attempt = 0; attempt < maxAttempts; attempt++) {
+            final String code = generateRandomCode();
+            final ShortUrl candidate = ShortUrl.builder()
+                    .originalUrl(originalUrl)
+                    .code(code)
+                    .createdAt(Instant.now())
+                    .build();
+            try {
+                return shortUrlRepository.saveAndFlush(candidate);
+            } catch (DataIntegrityViolationException e) {
+                // Colisão de unicidade: tenta novamente com outro código
+            }
+        }
+        throw new IllegalStateException("Não foi possível gerar um código único após múltiplas tentativas");
     }
 
     public ShortUrl getByCode(String code) {
@@ -61,14 +82,10 @@ public class UrlShortenerService {
         return shortUrlRepository.findRanking();
     }
 
-    private String generateUniqueCode() {
-        String code;
-        do {
-            code = random.ints(CODE_LENGTH, 0, ALPHABET.length())
-                    .mapToObj(ALPHABET::charAt)
-                    .collect(StringBuilder::new, StringBuilder::append, StringBuilder::append)
-                    .toString();
-        } while (shortUrlRepository.existsByCode(code));
-        return code;
+    private String generateRandomCode() {
+        return random.ints(CODE_LENGTH, 0, ALPHABET.length())
+                .mapToObj(ALPHABET::charAt)
+                .collect(StringBuilder::new, StringBuilder::append, StringBuilder::append)
+                .toString();
     }
 }
