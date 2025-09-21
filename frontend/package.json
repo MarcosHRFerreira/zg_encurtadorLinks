@@ -7,7 +7,8 @@
     "build": "ng build",
     "watch": "ng build --watch --configuration development",
     "test": "jest",
-    "api:types": "openapi-typescript http://localhost:8080/v3/api-docs -o src/app/core/api/types.ts"
+    "api:types": "openapi-typescript http://localhost:8080/v3/api-docs -o src/app/core/api/types.ts",
+    "vercel-build": "echo \"window.__ENV__={API_BASE_URL:'${API_BASE_URL:-}'}\" > public/env.js && ng build"
   },
   "prettier": {
     "printWidth": 100,
