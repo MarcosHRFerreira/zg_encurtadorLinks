@@ -34,12 +34,9 @@ class LinkControllerTest {
     private LinkController controller;
 
     private static ShortUrl makeSu(String url, String code) {
-        return ShortUrl.builder()
-                .id(1L)
-                .originalUrl(url)
-                .code(code)
-                .createdAt(Instant.now())
-                .build();
+        ShortUrl su = new ShortUrl(url, code, Instant.now());
+        su.setId(1L);
+        return su;
     }
 
     @Test

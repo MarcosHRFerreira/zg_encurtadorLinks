@@ -5,7 +5,6 @@ import br.corp.shortener.dto.StatsResponse;
 import br.corp.shortener.entities.ShortUrl;
 import br.corp.shortener.repositories.ShortUrlAccessRepository;
 import br.corp.shortener.services.UrlShortenerService;
-import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -20,12 +19,16 @@ import io.swagger.v3.oas.annotations.responses.ApiResponses;
 import io.swagger.v3.oas.annotations.tags.Tag;
 
 @RestController
-@RequiredArgsConstructor
 @Tag(name = "Estatísticas", description = "Endpoints para consulta de estatísticas")
 public class StatsController {
 
     private final UrlShortenerService service;
     private final ShortUrlAccessRepository accessRepository;
+
+    public StatsController(UrlShortenerService service, ShortUrlAccessRepository accessRepository) {
+        this.service = service;
+        this.accessRepository = accessRepository;
+    }
 
     @GetMapping("/stats/{code:[A-Za-z0-9]{5}}")
     @Operation(summary = "Obter estatísticas da URL", description = "Retorna o código, URL original e total de acessos")

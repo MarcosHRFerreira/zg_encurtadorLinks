@@ -32,7 +32,9 @@ class StatsControllerTest {
     private StatsController controller;
 
     private static ShortUrl su(String url, String code) {
-        return ShortUrl.builder().id(7L).originalUrl(url).code(code).createdAt(Instant.now()).build();
+        ShortUrl su = new ShortUrl(url, code, Instant.now());
+        su.setId(7L);
+        return su;
     }
 
     @Test

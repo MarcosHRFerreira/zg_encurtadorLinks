@@ -6,7 +6,6 @@ import br.corp.shortener.entities.ShortUrlAccess;
 import br.corp.shortener.exceptions.DuplicateCodeException;
 import br.corp.shortener.repositories.ShortUrlAccessRepository;
 import br.corp.shortener.repositories.ShortUrlRepository;
-import lombok.RequiredArgsConstructor;
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -17,7 +16,6 @@ import java.util.List;
 import java.util.Random;
 
 @Service
-@RequiredArgsConstructor
 public class UrlShortenerService {
 
     private static final String ALPHABET = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789";
@@ -27,17 +25,18 @@ public class UrlShortenerService {
     private final ShortUrlRepository shortUrlRepository;
     private final ShortUrlAccessRepository shortUrlAccessRepository;
 
+    public UrlShortenerService(ShortUrlRepository shortUrlRepository, ShortUrlAccessRepository shortUrlAccessRepository) {
+        this.shortUrlRepository = shortUrlRepository;
+        this.shortUrlAccessRepository = shortUrlAccessRepository;
+    }
+
     @Transactional
     public ShortUrl shorten(String originalUrl, String customCode) {
         if (customCode != null) {
             if (shortUrlRepository.existsByCode(customCode)) {
                 throw new DuplicateCodeException(customCode);
             }
-            final ShortUrl candidate = ShortUrl.builder()
-                    .originalUrl(originalUrl)
-                    .code(customCode)
-                    .createdAt(Instant.now())
-                    .build();
+            final ShortUrl candidate = new ShortUrl(originalUrl, customCode, Instant.now());
             try {
                 return shortUrlRepository.saveAndFlush(candidate);
             } catch (DataIntegrityViolationException e) {
@@ -49,11 +48,7 @@ public class UrlShortenerService {
         final int maxAttempts = 5;
         for (int attempt = 0; attempt < maxAttempts; attempt++) {
             final String code = generateRandomCode();
-            final ShortUrl candidate = ShortUrl.builder()
-                    .originalUrl(originalUrl)
-                    .code(code)
-                    .createdAt(Instant.now())
-                    .build();
+            final ShortUrl candidate = new ShortUrl(originalUrl, code, Instant.now());
             try {
                 return shortUrlRepository.saveAndFlush(candidate);
             } catch (DataIntegrityViolationException e) {
@@ -69,12 +64,7 @@ public class UrlShortenerService {
 
     @Transactional
     public void registerAccess(ShortUrl shortUrl, String userAgent, String referer) {
-        ShortUrlAccess access = ShortUrlAccess.builder()
-                .shortUrl(shortUrl)
-                .accessedAt(Instant.now())
-                .userAgent(userAgent)
-                .referer(referer)
-                .build();
+        ShortUrlAccess access = new ShortUrlAccess(shortUrl, Instant.now(), userAgent, referer);
         shortUrlAccessRepository.save(access);
     }
 

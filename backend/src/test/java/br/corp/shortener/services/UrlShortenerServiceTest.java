@@ -42,12 +42,9 @@ class UrlShortenerServiceTest {
     private ArgumentCaptor<ShortUrlAccess> accessCaptor;
 
     private static ShortUrl buildShortUrl(String url, String code) {
-        return ShortUrl.builder()
-                .id(1L)
-                .originalUrl(url)
-                .code(code)
-                .createdAt(Instant.now())
-                .build();
+        ShortUrl su = new ShortUrl(url, code, Instant.now());
+        su.setId(1L);
+        return su;
     }
 
     @BeforeEach
