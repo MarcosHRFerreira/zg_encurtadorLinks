@@ -1,59 +1,75 @@
-# Frontend
+# Frontend (Angular)
 
-This project was generated using [Angular CLI](https://github.com/angular/angular-cli) version 20.3.2.
+Aplicação Angular que consome a API de encurtamento de URLs. Inclui telas para encurtar URLs e consultar estatísticas/ranking.
 
-## Development server
+## Pré-requisitos
+- Node.js LTS
+- Yarn
 
-To start a local development server, run:
-
+## Instalação
 ```bash
-ng serve
+yarn install
 ```
 
-Once the server is running, open your browser and navigate to `http://localhost:4200/`. The application will automatically reload whenever you modify any of the source files.
-
-## Code scaffolding
-
-Angular CLI includes powerful code scaffolding tools. To generate a new component, run:
-
+## Desenvolvimento
+- Iniciar servidor dev em porta customizada (recomendado 4201 ou 4203):
 ```bash
-ng generate component component-name
+yarn start --port 4201
+# ou
+yarn ng serve --port 4203 --host localhost
+```
+Rotas principais:
+- http://localhost:4201/shorten (ou http://localhost:4203/shorten)
+- http://localhost:4201/consultas (ou http://localhost:4203/consultas)
+
+Proxy para o backend:
+- O app usa `proxy.conf.json` para encaminhar chamadas à API do backend em `http://localhost:8080`.
+
+## Geração de tipos a partir do OpenAPI do backend
+Gere os tipos TypeScript do backend (precisa do backend rodando em `http://localhost:8080`).
+```bash
+yarn api:types
+```
+Resultado: arquivo gerado em `src/app/core/api/types.ts`.
+
+## Scripts úteis
+```bash
+yarn start              # ng serve (use --port para definir a porta)
+yarn build              # build de produção
+yarn test               # testes com Jest
+yarn api:types          # gera tipos a partir do OpenAPI do backend
 ```
 
-For a complete list of available schematics (such as `components`, `directives`, or `pipes`), run:
-
+## Testes
+- Framework: Jest (com jest-preset-angular) + jsdom.
+- Rodar testes:
 ```bash
-ng generate --help
+yarn test
+```
+- Boas práticas (recomendadas neste repo):
+  - Testes de integração dos endpoints HTTP ficam em `test/integration`.
+  - Testes de unidade em `test/unit`.
+  - Use Arrange-Act-Assert, mocks/stubs (sinon) quando necessário.
+
+## Estrutura (parcial)
+```
+frontend/
+├── angular.json
+├── package.json
+├── proxy.conf.json
+├── src/
+│   ├── app/
+│   │   └── core/
+│   │       └── api/
+│   │           └── types.ts  # gerado por openapi-typescript
+│   ├── index.html
+│   ├── main.ts
+│   └── styles.scss
+└── test/
+    ├── integration/
+    └── unit/
 ```
 
-## Building
-
-To build the project run:
-
-```bash
-ng build
-```
-
-This will compile your project and store the build artifacts in the `dist/` directory. By default, the production build optimizes your application for performance and speed.
-
-## Running unit tests
-
-To execute unit tests with the [Karma](https://karma-runner.github.io) test runner, use the following command:
-
-```bash
-ng test
-```
-
-## Running end-to-end tests
-
-For end-to-end (e2e) testing, run:
-
-```bash
-ng e2e
-```
-
-Angular CLI does not come with an end-to-end testing framework by default. You can choose one that suits your needs.
-
-## Additional Resources
-
-For more information on using the Angular CLI, including detailed command references, visit the [Angular CLI Overview and Command Reference](https://angular.dev/tools/cli) page.
+## Dicas
+- Após atualizar a API do backend, rode `yarn api:types` para manter os tipos do frontend sincronizados.
+- Se o backend não estiver acessível, a geração de tipos falhará. Certifique-se de que está rodando em `http://localhost:8080`.

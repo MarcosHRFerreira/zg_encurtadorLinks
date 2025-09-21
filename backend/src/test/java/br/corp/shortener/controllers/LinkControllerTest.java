@@ -45,8 +45,7 @@ class LinkControllerTest {
         ShortUrl su = makeSu("https://ex.com", "ABCDE");
         when(service.shorten("https://ex.com", null)).thenReturn(su);
 
-        ShortenRequest req = new ShortenRequest();
-        req.setUrl("https://ex.com");
+        ShortenRequest req = new ShortenRequest("https://ex.com", null);
 
         ResponseEntity<ShortenResponse> resp = controller.shorten(req);
 

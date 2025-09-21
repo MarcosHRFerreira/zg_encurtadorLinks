@@ -26,6 +26,7 @@ import { QueriesFacade } from '../state/queries.facade';
             <p><strong>Código:</strong> {{ s.code }}</p>
             <p><strong>Original:</strong> <a [href]="s.originalUrl" target="_blank" rel="noopener">{{ s.originalUrl }}</a></p>
             <p><strong>Acessos:</strong> {{ s.hits }}</p>
+            <p><strong>URL curta:</strong> <a [href]="backendOrigin + '/' + s.code" target="_blank" rel="noopener">{{ backendOrigin + '/' + s.code }}</a></p>
           </div>
         </article>
 
@@ -35,13 +36,27 @@ import { QueriesFacade } from '../state/queries.facade';
             <button class="btn ghost" (click)="reloadRanking()" [disabled]="facade.rankingLoading()">Recarregar</button>
           </div>
 
-          <div class="error" *ngIf="facade.rankingError() as err">{{ err }}</div>
-          <ol class="ranking" *ngIf="facade.ranking() as items">
-            <li *ngFor="let item of items; trackBy: trackByCode">
-              <span class="code">{{ item.code }}</span>
-              <span class="hits">{{ item.hits }} acesso(s)</span>
-            </li>
-          </ol>
+          <div class="loading" *ngIf="facade.rankingLoading()" aria-live="polite">Recarregando...</div>
+
+          <ng-container *ngIf="!facade.rankingLoading()">
+            <div class="error" *ngIf="facade.rankingError() as err">{{ err }}</div>
+
+            <ng-container *ngIf="!facade.rankingError()">
+              <ng-container *ngIf="facade.ranking() as items">
+                <ng-container *ngIf="items.length > 0; else emptyRanking">
+                  <ol class="ranking">
+                    <li *ngFor="let item of items; trackBy: trackByCode">
+                      <span class="code">{{ item.code }}</span>
+                      <span class="hits">{{ item.hits }} acesso(s)</span>
+                    </li>
+                  </ol>
+                </ng-container>
+              </ng-container>
+              <ng-template #emptyRanking>
+                <p class="muted">Sem itens no ranking ainda</p>
+              </ng-template>
+            </ng-container>
+          </ng-container>
         </article>
       </div>
     </section>
@@ -55,6 +70,8 @@ import { QueriesFacade } from '../state/queries.facade';
     `.btn{padding:8px 12px;margin-top:8px;cursor:pointer}`,
     `.btn.ghost{background:transparent;border:1px solid #e5e7eb}`,
     `.error{color:#c0392b;margin-top:8px}`,
+    `.loading{color:#6b7280;margin-top:8px}`,
+    `.muted{color:#6b7280;margin-top:8px}`,
     `.result{background:#f6f8fa;padding:12px;margin-top:12px;border-radius:6px}`,
     `.ranking{margin:8px 0;padding-left:20px}`,
     `.ranking li{display:flex;gap:8px;align-items:center;padding:4px 0}`,
@@ -66,6 +83,7 @@ import { QueriesFacade } from '../state/queries.facade';
 export default class QueriesPageComponent {
   private readonly fb = inject(FormBuilder);
   readonly facade = inject(QueriesFacade);
+  readonly backendOrigin: string = typeof window !== 'undefined' ? `${window.location.protocol}//${window.location.hostname}:8080` : 'http://localhost:8080';
 
   readonly statsForm = this.fb.nonNullable.group({
     code: ['', [Validators.required, Validators.pattern(/^[A-Za-z0-9]{5}$/)]]

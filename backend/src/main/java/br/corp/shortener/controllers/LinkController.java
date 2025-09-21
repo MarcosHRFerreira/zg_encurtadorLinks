@@ -55,7 +55,7 @@ public class LinkController {
             @ApiResponse(responseCode = "500", description = "Erro interno", content = @Content(schema = @Schema(implementation = ErrorResponse.class)))
     })
     public ResponseEntity<ShortenResponse> shorten(@Valid @RequestBody ShortenRequest request) {
-        ShortUrl shortUrl = service.shorten(request.getUrl(), request.getCode());
+        ShortUrl shortUrl = service.shorten(request.url(), request.code());
         ShortenResponse body = new ShortenResponse(shortUrl.getId(), shortUrl.getOriginalUrl(), shortUrl.getCode(), shortUrl.getCreatedAt());
         return ResponseEntity.created(URI.create("/" + shortUrl.getCode())).body(body);
     }
