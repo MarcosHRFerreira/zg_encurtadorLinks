@@ -83,10 +83,12 @@ import { QueriesFacade } from '../state/queries.facade';
 export default class QueriesPageComponent {
   private readonly fb = inject(FormBuilder);
   readonly facade = inject(QueriesFacade);
--  readonly backendOrigin: string = typeof window !== 'undefined' ? `${window.location.protocol}//${window.location.hostname}:8080` : 'http://localhost:8080';
-+  readonly backendOrigin: string = typeof window !== 'undefined' && window.__ENV__?.API_BASE_URL
-+    ? String(window.__ENV__.API_BASE_URL)
-+    : (typeof window !== 'undefined' ? `${window.location.protocol}//${window.location.hostname}:8080` : 'http://localhost:8080');
+  // Fix: remove diff markers and use window.__ENV__ safely; strip trailing slash if present
+  readonly backendOrigin: string = typeof window !== 'undefined' && window.__ENV__?.API_BASE_URL
+    ? String(window.__ENV__.API_BASE_URL).replace(/\/$/, '')
+    : (typeof window !== 'undefined'
+        ? `${window.location.protocol}//${window.location.hostname}:8080`
+        : 'http://localhost:8080');
 
   readonly statsForm = this.fb.nonNullable.group({
     code: ['', [Validators.required, Validators.pattern(/^[A-Za-z0-9]{5}$/)]]
