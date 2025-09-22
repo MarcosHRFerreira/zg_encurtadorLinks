@@ -4,7 +4,7 @@
   "scripts": {
     "ng": "ng",
     "start": "ng serve",
-    "build": "ng build",
+    "build": "yarn vercel-build",
     "watch": "ng build --watch --configuration development",
     "test": "jest",
     "api:types": "openapi-typescript http://localhost:8080/v3/api-docs -o src/app/core/api/types.ts",
