@@ -17,6 +17,10 @@ import io.swagger.v3.oas.annotations.media.Schema;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import io.swagger.v3.oas.annotations.responses.ApiResponses;
 import io.swagger.v3.oas.annotations.tags.Tag;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 
 @RestController
 @Tag(name = "Estatísticas", description = "Endpoints para consulta de estatísticas")
@@ -24,6 +28,7 @@ public class StatsController {
 
     private final UrlShortenerService service;
     private final ShortUrlAccessRepository accessRepository;
+    private static final Logger log = LoggerFactory.getLogger(StatsController.class);
 
     public StatsController(UrlShortenerService service, ShortUrlAccessRepository accessRepository) {
         this.service = service;
@@ -38,13 +43,28 @@ public class StatsController {
             @ApiResponse(responseCode = "500", description = "Erro interno", content = @Content(schema = @Schema(implementation = ErrorResponse.class)))
     })
     public ResponseEntity<?> stats(@PathVariable("code") String code) {
+        log.info("Stats requested for code={}", code);
         ShortUrl su = service.getByCode(code);
         if (su == null) {
+            log.warn("Stats not found for code={}", code);
             ErrorResponse errorResponse = new ErrorResponse("URL não encontrada", "O código informado não existe");
             return ResponseEntity.status(HttpStatus.NOT_FOUND).body(errorResponse);
         }
         long hits = accessRepository.countByShortUrl(su);
+        log.info("Stats found: code={}, hits={}", su.getCode(), hits);
         StatsResponse resp = new StatsResponse(su.getCode(), su.getOriginalUrl(), hits);
         return ResponseEntity.ok(resp);
+    }
+
+    @GetMapping("/stats")
+    @Operation(summary = "Listar estatísticas paginadas", description = "Retorna todas as estatísticas em uma lista paginada")
+    @ApiResponses({
+            @ApiResponse(responseCode = "200", description = "OK", content = @Content(schema = @Schema(implementation = StatsResponse.class))),
+            @ApiResponse(responseCode = "500", description = "Erro interno", content = @Content(schema = @Schema(implementation = ErrorResponse.class)))
+    })
+    public ResponseEntity<Page<StatsResponse>> statsPage(Pageable pageable) {
+        log.info("Stats page requested: page={}, size={}", pageable.getPageNumber(), pageable.getPageSize());
+        Page<StatsResponse> page = service.listStats(pageable);
+        return ResponseEntity.ok(page);
     }
 }

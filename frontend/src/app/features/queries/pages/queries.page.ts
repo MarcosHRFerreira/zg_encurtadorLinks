@@ -32,7 +32,7 @@ import { QueriesFacade } from '../state/queries.facade';
 
         <article class="card">
           <div class="row">
-            <h3>Ranking</h3>
+            <h3>Ranking de códigos mais acessados</h3>
             <button class="btn ghost" (click)="reloadRanking()" [disabled]="facade.rankingLoading()">Recarregar</button>
           </div>
 
@@ -58,6 +58,54 @@ import { QueriesFacade } from '../state/queries.facade';
             </ng-container>
           </ng-container>
         </article>
+
+        <article class="card">
+          <div class="row">
+            <h3>Estatísticas gerais</h3>
+            <div class="controls">
+              <label>
+                Tamanho da página
+                <select [value]="facade.statsPageSize()" (change)="onPageSizeChange($event)">
+                  <option *ngFor="let opt of pageSizeOptions" [value]="opt">{{ opt }}</option>
+                </select>
+              </label>
+              <div class="pager">
+                <button class="btn ghost" (click)="prevPage()" [disabled]="facade.statsPageLoading() || facade.statsPage()?.first">Anterior</button>
+                <button class="btn ghost" (click)="nextPage()" [disabled]="facade.statsPageLoading() || facade.statsPage()?.last">Próxima</button>
+              </div>
+            </div>
+          </div>
+
+          <div class="loading" *ngIf="facade.statsPageLoading()" aria-live="polite">Carregando...</div>
+          <div class="error" *ngIf="facade.statsPageError() as err">{{ err }}</div>
+
+          <ng-container *ngIf="!facade.statsPageLoading() && !facade.statsPageError()">
+            <ng-container *ngIf="facade.statsPage() as page">
+              <ng-container *ngIf="!page.empty; else emptyStats">
+                <table class="table">
+                  <thead>
+                    <tr>
+                      <th>Código</th>
+                      <th>Original</th>
+                      <th class="numeric">Acessos</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    <tr *ngFor="let s of page.content; trackBy: trackByCode">
+                      <td>{{ s.code }}</td>
+                      <td class="truncate"><a [href]="s.originalUrl" target="_blank" rel="noopener">{{ s.originalUrl }}</a></td>
+                      <td class="numeric">{{ s.hits }}</td>
+                    </tr>
+                  </tbody>
+                </table>
+                <p class="muted">Página {{ page.number + 1 }} de {{ page.totalPages }} — {{ page.totalElements }} registro(s)</p>
+              </ng-container>
+            </ng-container>
+            <ng-template #emptyStats>
+              <p class="muted">Nenhuma estatística disponível</p>
+            </ng-template>
+          </ng-container>
+        </article>
       </div>
     </section>
   `,
@@ -66,6 +114,8 @@ import { QueriesFacade } from '../state/queries.facade';
     `.cards{display:grid;grid-template-columns:1fr;gap:16px}@media(min-width:720px){.cards{grid-template-columns:1fr 1fr}}`,
     `.card{background:#fff;border:1px solid #e5e7eb;border-radius:8px;padding:16px}`,
     `.row{display:flex;align-items:center;justify-content:space-between}`,
+    `.controls{display:flex;gap:12px;align-items:center}`,
+    `.pager{display:flex;gap:8px}`,
     `.input{width:100%;padding:8px;margin:4px 0}`,
     `.btn{padding:8px 12px;margin-top:8px;cursor:pointer}`,
     `.btn.ghost{background:transparent;border:1px solid #e5e7eb}`,
@@ -76,16 +126,19 @@ import { QueriesFacade } from '../state/queries.facade';
     `.ranking{margin:8px 0;padding-left:20px}`,
     `.ranking li{display:flex;gap:8px;align-items:center;padding:4px 0}`,
     `.code{font-weight:600}`,
-    `.hits{color:#6b7280}`
+    `.hits{color:#6b7280}`,
+    `.table{width:100%;border-collapse:collapse;margin-top:8px}`,
+    `.table th,.table td{border-bottom:1px solid #e5e7eb;padding:8px;text-align:left}`,
+    `.table th.numeric,.table td.numeric{text-align:right}`,
+    `.truncate{max-width:380px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}`
   ],
   changeDetection: ChangeDetectionStrategy.OnPush
 })
 export default class QueriesPageComponent {
   private readonly fb = inject(FormBuilder);
   readonly facade = inject(QueriesFacade);
-  // Fix: remove diff markers and use window.__ENV__ safely; strip trailing slash if present
   readonly backendOrigin: string = typeof window !== 'undefined' && window.__ENV__?.API_BASE_URL
-    ? String(window.__ENV__.API_BASE_URL).replace(/\/$/, '')
+    ? String(window.__ENV__?.API_BASE_URL).replace(/\/$/, '')
     : (typeof window !== 'undefined'
         ? `${window.location.protocol}//${window.location.hostname}:8080`
         : 'http://localhost:8080');
@@ -94,8 +147,11 @@ export default class QueriesPageComponent {
     code: ['', [Validators.required, Validators.pattern(/^[A-Za-z0-9]{5}$/)]]
   });
 
+  readonly pageSizeOptions = [5, 10, 20, 50] as const;
+
   ngOnInit(): void {
     void this.facade.fetchRanking();
+    void this.facade.fetchStatsPage();
   }
 
   async onStatsSubmit(): Promise<void> {
@@ -106,6 +162,20 @@ export default class QueriesPageComponent {
 
   async reloadRanking(): Promise<void> {
     await this.facade.fetchRanking();
+  }
+
+  async nextPage(): Promise<void> {
+    await this.facade.nextStatsPage();
+  }
+
+  async prevPage(): Promise<void> {
+    await this.facade.prevStatsPage();
+  }
+
+  async onPageSizeChange(event: Event): Promise<void> {
+    const target = event.target as HTMLSelectElement;
+    const size = parseInt(target.value, 10);
+    await this.facade.setStatsPageSize(size);
   }
 
   trackByCode = (_: number, item: { code: string }): string => item.code;

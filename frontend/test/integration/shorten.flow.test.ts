@@ -57,7 +57,7 @@ describe('Shorten Flow (integration)', () => {
 
     const req = httpMock.expectOne('/shorten');
     expect(req.request.method).toBe('POST');
-    expect(req.request.body).toEqual({ url: 'https://invalid', code: '' });
+    expect(req.request.body).toEqual({ url: 'https://invalid' });
 
     req.flush({ message: 'invalid' }, { status: 400, statusText: 'Bad Request' });
 

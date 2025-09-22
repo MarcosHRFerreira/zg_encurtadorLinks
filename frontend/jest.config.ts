@@ -9,7 +9,8 @@ const config: Config = {
   testPathIgnorePatterns: ['/node_modules/', '/dist/', '<rootDir>/src/test.ts'],
   moduleNameMapper: {
     '^app/(.*)$': '<rootDir>/src/app/$1',
-    '^src/(.*)$': '<rootDir>/src/$1'
+    '^src/(.*)$': '<rootDir>/src/$1',
+    '^sinon$': '<rootDir>/node_modules/sinon/pkg/sinon.js',
   },
   restoreMocks: true,
   clearMocks: true,

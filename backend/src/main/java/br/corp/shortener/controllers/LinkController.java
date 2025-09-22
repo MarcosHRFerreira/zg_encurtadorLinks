@@ -22,11 +22,16 @@ import org.springframework.web.bind.annotation.*;
 import java.net.URI;
 import java.util.List;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
 @RestController
 @Tag(name = "Links", description = "Endpoints para encurtamento, redirecionamento e ranking")
 public class LinkController {
 
     private final UrlShortenerService service;
+
+    private static final Logger log = LoggerFactory.getLogger(LinkController.class);
 
     public LinkController(UrlShortenerService service) {
         this.service = service;
@@ -55,18 +60,21 @@ public class LinkController {
             @ApiResponse(responseCode = "500", description = "Erro interno", content = @Content(schema = @Schema(implementation = ErrorResponse.class)))
     })
     public ResponseEntity<ShortenResponse> shorten(@Valid @RequestBody ShortenRequest request) {
+        log.info("Shorten endpoint called: url={}, customCodeProvided={}", request.url(), request.code() != null);
         ShortUrl shortUrl = service.shorten(request.url(), request.code());
         ShortenResponse body = new ShortenResponse(shortUrl.getId(), shortUrl.getOriginalUrl(), shortUrl.getCode(), shortUrl.getCreatedAt());
+        log.info("Shorten created: code={}, location=/{}", shortUrl.getCode(), shortUrl.getCode());
         return ResponseEntity.created(URI.create("/" + shortUrl.getCode())).body(body);
     }
 
     @GetMapping("/ranking")
-    @Operation(summary = "Ranking de URLs", description = "Lista as URLs mais acessadas")
+    @Operation(summary = "Ranking de códigos mais acessados", description = "Lista as URLs mais acessadas")
     @ApiResponses({
             @ApiResponse(responseCode = "200", description = "OK", content = @Content(schema = @Schema(implementation = RankingItem.class))),
             @ApiResponse(responseCode = "500", description = "Erro interno", content = @Content(schema = @Schema(implementation = ErrorResponse.class)))
     })
     public List<RankingItem> ranking() {
+        log.info("Ranking endpoint called");
         return service.ranking();
     }
 
@@ -81,18 +89,22 @@ public class LinkController {
                                       @RequestHeader(value = "User-Agent", required = false) String ua,
                                       @RequestHeader(value = "Referer", required = false) String referer) {
         try {
+            log.info("Redirect requested: code={}", code);
             ShortUrl su = service.getByCode(code);
             if (su == null) {
+                log.warn("Redirect failed: code not found={}", code);
                 ErrorResponse errorResponse = new ErrorResponse("URL não encontrada", "O código informado não existe");
                 return ResponseEntity.status(HttpStatus.NOT_FOUND).body(errorResponse);
             }
 
             service.registerAccess(su, ua, referer);
+            log.info("Redirecting code={} to {}", code, su.getOriginalUrl());
 
             return ResponseEntity.status(HttpStatus.FOUND)
                     .header("Location", su.getOriginalUrl())
                     .build();
         } catch (Exception e) {
+            log.error("Redirect error for code={}: {}", code, e.getMessage(), e);
             ErrorResponse errorResponse = new ErrorResponse("Erro interno", e.getMessage());
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(errorResponse);
         }

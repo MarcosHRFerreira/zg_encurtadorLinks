@@ -6,11 +6,26 @@ import type { components } from 'app/core/api/types';
 export type StatsDTO = components['schemas']['StatsResponse'];
 export type RankingItemDTO = components['schemas']['RankingItem'];
 
+// Tipagem de paginação compatível com Spring Data
+export type Page<T> = Readonly<{
+  content: ReadonlyArray<T>;
+  totalElements: number;
+  totalPages: number;
+  size: number;
+  number: number; // página atual (0-based)
+  first: boolean;
+  last: boolean;
+  numberOfElements: number;
+  empty: boolean;
+}>;
+
 export type StatsDomain = Readonly<{
   code: string;
   originalUrl: string;
   hits: number;
 }>;
+
+export type StatsPageDomain = Page<StatsDomain>;
 
 export type RankingDomainItem = Readonly<{
   code: string;
@@ -25,6 +40,35 @@ export class StatsAdapter {
     const res = await firstValueFrom(this.http.get<StatsDTO>(`/stats/${encodeURIComponent(code)}`));
     if (!res) throw new Error('Resposta vazia');
     return this.toDomain(res);
+  }
+
+  async list(page: number, size: number): Promise<StatsPageDomain> {
+    const dto = await firstValueFrom(
+      this.http.get<{
+        content: StatsDTO[];
+        totalElements: number;
+        totalPages: number;
+        size: number;
+        number: number;
+        first: boolean;
+        last: boolean;
+        numberOfElements: number;
+        empty: boolean;
+      }>(`/stats?page=${encodeURIComponent(page)}&size=${encodeURIComponent(size)}`)
+    );
+
+    const content = Array.isArray(dto.content) ? dto.content.map(this.toDomain) : [];
+    return {
+      content,
+      totalElements: dto.totalElements,
+      totalPages: dto.totalPages,
+      size: dto.size,
+      number: dto.number,
+      first: dto.first,
+      last: dto.last,
+      numberOfElements: dto.numberOfElements,
+      empty: dto.empty,
+    } as const;
   }
 
   toDomain(dto: StatsDTO): StatsDomain {

@@ -14,11 +14,17 @@ export class ApiBaseUrlInterceptor implements HttpInterceptor {
       return next.handle(req);
     }
 
-    const base = typeof window !== 'undefined' && window.__ENV__?.API_BASE_URL
+    // Preferir env; se não houver, deixar URL relativa para o proxy do dev-server tratar (evita CORS em desenvolvimento)
+    const baseFromEnv = typeof window !== 'undefined' && window.__ENV__?.API_BASE_URL
       ? String(window.__ENV__?.API_BASE_URL).replace(/\/$/, '')
-      : '';
+      : undefined;
 
-    const url = base ? `${base}${req.url}` : req.url;
+    if (!baseFromEnv) {
+      // Sem base configurada via env.js: não reescreve a URL
+      return next.handle(req);
+    }
+
+    const url = `${baseFromEnv}${req.url}`;
     return next.handle(req.clone({ url }));
   }
 }

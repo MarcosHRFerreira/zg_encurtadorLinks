@@ -1,5 +1,5 @@
 import { Injectable, computed, inject, signal } from '@angular/core';
-import { StatsAdapter, type StatsDomain, RankingAdapter, type RankingDomainItem } from '../data/queries.adapters';
+import { StatsAdapter, type StatsDomain, type StatsPageDomain, RankingAdapter, type RankingDomainItem } from '../data/queries.adapters';
 
 export type ErrorLike = Readonly<{
   status?: number;
@@ -18,6 +18,13 @@ export class QueriesFacade {
   private readonly _statsError = signal<string | null>(null);
   private readonly _stats = signal<StatsDomain | null>(null);
 
+  // Paginação de estatísticas
+  private readonly _statsPageLoading = signal(false);
+  private readonly _statsPageError = signal<string | null>(null);
+  private readonly _statsPage = signal<StatsPageDomain | null>(null);
+  private readonly _statsPageNumber = signal(0);
+  private readonly _statsPageSize = signal(10);
+
   private readonly _rankingLoading = signal(false);
   private readonly _rankingError = signal<string | null>(null);
   private readonly _ranking = signal<ReadonlyArray<RankingDomainItem>>([]);
@@ -25,6 +32,13 @@ export class QueriesFacade {
   readonly statsLoading = computed(() => this._statsLoading());
   readonly statsError = computed(() => this._statsError());
   readonly stats = computed(() => this._stats());
+
+  // Computeds de paginação de estatísticas
+  readonly statsPageLoading = computed(() => this._statsPageLoading());
+  readonly statsPageError = computed(() => this._statsPageError());
+  readonly statsPage = computed(() => this._statsPage());
+  readonly statsPageNumber = computed(() => this._statsPageNumber());
+  readonly statsPageSize = computed(() => this._statsPageSize());
 
   readonly rankingLoading = computed(() => this._rankingLoading());
   readonly rankingError = computed(() => this._rankingError());
@@ -34,6 +48,13 @@ export class QueriesFacade {
     this._statsLoading.set(false);
     this._statsError.set(null);
     this._stats.set(null);
+  }
+
+  resetStatsPage(): void {
+    this._statsPageLoading.set(false);
+    this._statsPageError.set(null);
+    this._statsPage.set(null);
+    this._statsPageNumber.set(0);
   }
 
   resetRanking(): void {
@@ -55,6 +76,47 @@ export class QueriesFacade {
     } finally {
       this._statsLoading.set(false);
     }
+  }
+
+  async fetchStatsPage(page?: number, size?: number): Promise<void> {
+    const pageNumber = typeof page === 'number' ? page : this._statsPageNumber();
+    const pageSize = typeof size === 'number' ? size : this._statsPageSize();
+
+    this._statsPageLoading.set(true);
+    this._statsPageError.set(null);
+    this._statsPage.set(null);
+    try {
+      const res = await this.statsAdapter.list(pageNumber, pageSize);
+      this._statsPage.set(res);
+      this._statsPageNumber.set(res.number);
+      this._statsPageSize.set(res.size);
+    } catch (_e: unknown) {
+      this._statsPageError.set('Erro ao carregar estatísticas paginadas');
+    } finally {
+      this._statsPageLoading.set(false);
+    }
+  }
+
+  nextStatsPage(): Promise<void> {
+    const p = this._statsPage();
+    if (p?.last) return Promise.resolve();
+    return this.fetchStatsPage(this._statsPageNumber() + 1);
+  }
+
+  prevStatsPage(): Promise<void> {
+    const p = this._statsPage();
+    if (p?.first) return Promise.resolve();
+    return this.fetchStatsPage(this._statsPageNumber() - 1);
+  }
+
+  setStatsPageSize(size: number): Promise<void> {
+    if (!Number.isFinite(size)) {
+      // ignora evento inválido sem disparar requisição
+      return Promise.resolve();
+    }
+    const sanitized = Math.max(1, Math.floor(size));
+    this._statsPageSize.set(sanitized);
+    return this.fetchStatsPage(0, sanitized);
   }
 
   async fetchRanking(): Promise<void> {
