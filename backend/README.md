@@ -73,6 +73,12 @@ java -jar target/url-shortener-0.0.1-SNAPSHOT.jar
 ```
 Dica: execute sempre via Maven. Rodar `java`/`javac` sem Maven ignora o classpath gerenciado e tende a causar erros.
 
+## CORS
+- Configurável via variáveis de ambiente lidas em runtime (ver `CorsConfig`):
+  - CORS_ALLOWED_ORIGINS: lista CSV de origens permitidas (default: `*`). Ex.: `https://zg-encurtador-links.vercel.app,http://localhost:4201,http://localhost:4203`
+  - CORS_ALLOWED_ORIGIN_PATTERNS: padrões com curingas (ex.: `https://*.vercel.app`) usados quando necessário.
+- No docker-compose, a aplicação já define um valor padrão para CORS_ALLOWED_ORIGINS com Vercel + localhost.
+
 ## Documentação da API (Swagger)
 - Swagger UI: http://localhost:8080/swagger-ui/index.html
 - OpenAPI (JSON): http://localhost:8080/v3/api-docs

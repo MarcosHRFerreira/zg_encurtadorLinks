@@ -32,10 +32,23 @@ yarn api:types
 ```
 Resultado: arquivo gerado em `src/app/core/api/types.ts`.
 
+## Variáveis de ambiente e URL da API
+- Em builds de produção, a URL da API é injetada no arquivo `public/env.js` via variável `API_BASE_URL` durante o script `vercel-build`.
+  - Exemplo local (Windows/PowerShell):
+    ```powershell
+    $env:API_BASE_URL='http://localhost:8080'; yarn build
+    ```
+  - Exemplo local (bash/zsh):
+    ```bash
+    API_BASE_URL=http://localhost:8080 yarn build
+    ```
+  - No Vercel, configure `API_BASE_URL` em Production/Preview.
+- Em desenvolvimento (`yarn start`), o Angular usa `proxy.conf.json` e encaminha `/shorten`, `/stats`, `/ranking` para `http://localhost:8080`.
+
 ## Scripts úteis
 ```bash
-yarn start              # ng serve (use --port para definir a porta)
-yarn build              # build de produção
+yarn start              # ng serve (usa proxy.conf.json e permite --port)
+yarn build              # build de produção (usa API_BASE_URL se definido)
 yarn test               # testes com Jest
 yarn api:types          # gera tipos a partir do OpenAPI do backend
 ```
@@ -46,10 +59,10 @@ yarn api:types          # gera tipos a partir do OpenAPI do backend
 ```bash
 yarn test
 ```
-- Boas práticas (recomendadas neste repo):
-  - Testes de integração dos endpoints HTTP ficam em `test/integration`.
+- Estrutura recomendada neste repo:
+  - Testes de integração dos endpoints HTTP em `test/integration`.
   - Testes de unidade em `test/unit`.
-  - Use Arrange-Act-Assert, mocks/stubs (sinon) quando necessário.
+  - Use Arrange-Act-Assert e sinon para stubs/mocks quando necessário.
 
 ## Estrutura (parcial)
 ```

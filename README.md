@@ -77,6 +77,18 @@ Dentro de `frontend/`:
 - Backend: `cd backend && mvn test` (perfil de testes usa H2, Jacoco em `target/site/jacoco/index.html`).
 - Frontend: `cd frontend && yarn test` (Jest + jest-preset-angular + jsdom).
 
+## Variáveis de ambiente e CORS
+
+- Backend:
+  - CORS_ALLOWED_ORIGINS: lista de origens permitidas separadas por vírgula. Exemplo (dev/prod): https://zg-encurtador-links.vercel.app,http://localhost:4200,http://localhost:4201,http://localhost:4203
+  - CORS_ALLOWED_ORIGIN_PATTERNS: padrões curinga opcionais (ex.: https://*.vercel.app)
+  - PORT: porta definida pelo provedor (a app usa server.port=${PORT:8080})
+- Frontend:
+  - Em build de produção, a URL da API é injetada via public/env.js usando API_BASE_URL.
+  - Exemplo local: PowerShell (Windows) -> $env:API_BASE_URL='http://localhost:8080'; yarn build
+    - bash/zsh (Linux/macOS) -> API_BASE_URL=http://localhost:8080 yarn build
+  - No Vercel, defina API_BASE_URL nos ambientes Production/Preview.
+
 ## Documentação detalhada
-- Backend: consulte <backend/README.md>
-- Frontend: consulte <frontend/README.md>
+- Backend: consulte [backend/README.md](backend/README.md)
+- Frontend: consulte [frontend/README.md](frontend/README.md)
