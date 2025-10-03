@@ -1,5 +1,6 @@
-import { Component, ChangeDetectionStrategy, inject } from '@angular/core';
+import { Component, ChangeDetectionStrategy, inject, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
+import { formatDateBrLocal } from 'app/core/utils/date-format';
 import { ReactiveFormsModule, FormBuilder, Validators } from '@angular/forms';
 import { ShortenFacade } from '../state/shorten.facade';
 
@@ -32,7 +33,7 @@ import { ShortenFacade } from '../state/shorten.facade';
           </strong>
         </p>
         <p>Original: <a [href]="r.originalUrl" target="_blank" rel="noopener">{{ r.originalUrl }}</a></p>
-        <p>Criado em: {{ r.createdAt | date:'short' }}</p>
+        <p>Criado em: {{ formatDate(r.createdAt) }}</p>
       </div>
 
       <div class="error" *ngIf="facade.error() as err">{{ err }}</div>
@@ -47,7 +48,7 @@ import { ShortenFacade } from '../state/shorten.facade';
   ],
   changeDetection: ChangeDetectionStrategy.OnPush
 })
-export default class ShortenPageComponent {
+export default class ShortenPageComponent implements OnInit {
   private readonly fb = inject(FormBuilder);
   readonly facade = inject(ShortenFacade);
 
@@ -69,5 +70,15 @@ export default class ShortenPageComponent {
     const payload: { url: string; code?: string } = { url };
     if (code && code.trim().length > 0) payload.code = code;
     await this.facade.create(payload as { url: string; code?: string });
+  }
+
+  ngOnInit(): void {
+    // Limpa estado e formulário ao entrar na tela de Encurtar
+    this.facade.reset();
+    this.form.reset({ url: '', code: '' });
+  }
+
+  formatDate(value: string): string {
+    return formatDateBrLocal(value);
   }
 }

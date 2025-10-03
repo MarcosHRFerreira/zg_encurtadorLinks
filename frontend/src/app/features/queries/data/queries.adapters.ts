@@ -32,6 +32,21 @@ export type RankingDomainItem = Readonly<{
   hits: number;
 }>;
 
+export type DayHitsDomain = Readonly<{
+  date: string; // ISO date string
+  hits: number;
+}>;
+
+// (Resumo geral removido)
+
+export type StatsCodeSummaryDomain = Readonly<{
+  code: string;
+  originalUrl: string;
+  totalHits: number;
+  last7DaysHits: number;
+  daily: ReadonlyArray<DayHitsDomain>;
+}>;
+
 @Injectable({ providedIn: 'root' })
 export class StatsAdapter {
   private readonly http = inject(HttpClient);
@@ -40,6 +55,35 @@ export class StatsAdapter {
     const res = await firstValueFrom(this.http.get<StatsDTO>(`/api/stats/${encodeURIComponent(code)}`));
     if (!res) throw new Error('Resposta vazia');
     return this.toDomain(res);
+  }
+
+  async getCodeSummary(code: string): Promise<StatsCodeSummaryDomain> {
+    const dto = await firstValueFrom(
+      this.http.get<{
+        code?: string;
+        originalUrl?: string;
+        totalHits?: number;
+        last7DaysHits?: number;
+        daily?: Array<{ date?: string; hits?: number }>;
+      }>(`/api/stats/${encodeURIComponent(code)}/summary`)
+    );
+
+    const codeVal = typeof dto.code === 'string' ? dto.code : code;
+    const originalUrl = typeof dto.originalUrl === 'string' ? dto.originalUrl : '';
+    const totalHits = typeof dto.totalHits === 'number' ? dto.totalHits : 0;
+    const rawLast7DaysHits = typeof dto.last7DaysHits === 'number' ? dto.last7DaysHits : 0;
+    const rawDaily: DayHitsDomain[] = Array.isArray(dto.daily)
+      ? dto.daily
+          .filter((d): d is { date: string; hits: number } => typeof d?.date === 'string' && typeof d?.hits === 'number')
+          .map((d) => ({ date: d.date, hits: d.hits }))
+      : [];
+
+    // Filtra dias com 0 acessos para evitar exibição de linhas zeradas
+    const daily = rawDaily.filter((d) => d.hits > 0);
+    // Garante consistência do total dos últimos 7 dias com a soma dos dias filtrados
+    const last7DaysHits = daily.reduce((sum, d) => sum + d.hits, 0);
+
+    return { code: codeVal, originalUrl, totalHits, last7DaysHits, daily } as const;
   }
 
   async list(page: number, size: number): Promise<StatsPageDomain> {

@@ -1,5 +1,5 @@
 import { Injectable, computed, inject, signal } from '@angular/core';
-import { StatsAdapter, type StatsDomain, type StatsPageDomain, RankingAdapter, type RankingDomainItem } from '../data/queries.adapters';
+import { StatsAdapter, type StatsPageDomain, RankingAdapter, type RankingDomainItem, type StatsCodeSummaryDomain } from '../data/queries.adapters';
 
 export type ErrorLike = Readonly<{
   status?: number;
@@ -16,7 +16,7 @@ export class QueriesFacade {
 
   private readonly _statsLoading = signal(false);
   private readonly _statsError = signal<string | null>(null);
-  private readonly _stats = signal<StatsDomain | null>(null);
+  private readonly _stats = signal<StatsCodeSummaryDomain | null>(null);
 
   // Paginação de estatísticas
   private readonly _statsPageLoading = signal(false);
@@ -28,6 +28,8 @@ export class QueriesFacade {
   private readonly _rankingLoading = signal(false);
   private readonly _rankingError = signal<string | null>(null);
   private readonly _ranking = signal<ReadonlyArray<RankingDomainItem>>([]);
+
+  // (Resumo geral removido)
 
   readonly statsLoading = computed(() => this._statsLoading());
   readonly statsError = computed(() => this._statsError());
@@ -43,6 +45,8 @@ export class QueriesFacade {
   readonly rankingLoading = computed(() => this._rankingLoading());
   readonly rankingError = computed(() => this._rankingError());
   readonly ranking = computed(() => this._ranking());
+
+  // (Resumo geral removido)
 
   resetStats(): void {
     this._statsLoading.set(false);
@@ -63,12 +67,14 @@ export class QueriesFacade {
     this._ranking.set([]);
   }
 
+  // (Resumo geral removido)
+
   async fetchStats(code: string): Promise<void> {
     this._statsLoading.set(true);
     this._statsError.set(null);
     this._stats.set(null);
     try {
-      const res = await this.statsAdapter.getByCode(code);
+      const res = await this.statsAdapter.getCodeSummary(code);
       this._stats.set(res);
     } catch (e: unknown) {
       const message = this.mapStatsError(e as ErrorLike);
@@ -77,6 +83,8 @@ export class QueriesFacade {
       this._statsLoading.set(false);
     }
   }
+
+  // (Resumo geral removido)
 
   async fetchStatsPage(page?: number, size?: number): Promise<void> {
     const pageNumber = typeof page === 'number' ? page : this._statsPageNumber();

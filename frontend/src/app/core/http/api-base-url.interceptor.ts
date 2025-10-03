@@ -18,7 +18,7 @@ export class ApiBaseUrlInterceptor implements HttpInterceptor {
     // para que o proxy do Angular trate CORS e roteamento, ignorando API_BASE_URL.
     const isDevServer = typeof window !== 'undefined'
       && /^localhost$|^127\.0\.0\.1$/.test(window.location.hostname)
-      && (window.location.port === '4201' || window.location.port === '4203');
+      && (window.location.port === '4200' || window.location.port === '4201' || window.location.port === '4203');
 
     if (isDevServer) {
       return next.handle(req);

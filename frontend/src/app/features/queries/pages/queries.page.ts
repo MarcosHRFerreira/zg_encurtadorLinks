@@ -1,4 +1,4 @@
-import { Component, ChangeDetectionStrategy, inject } from '@angular/core';
+import { Component, ChangeDetectionStrategy, inject, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { ReactiveFormsModule, FormBuilder, Validators } from '@angular/forms';
 import { QueriesFacade } from '../state/queries.facade';
@@ -25,8 +25,31 @@ import { QueriesFacade } from '../state/queries.facade';
           <div class="result" *ngIf="facade.stats() as s">
             <p><strong>Código:</strong> {{ s.code }}</p>
             <p><strong>Original:</strong> <a [href]="s.originalUrl" target="_blank" rel="noopener">{{ s.originalUrl }}</a></p>
-            <p><strong>Acessos:</strong> {{ s.hits }}</p>
             <p><strong>URL curta:</strong> <a [href]="backendOrigin + '/' + s.code" target="_blank" rel="noopener">{{ backendOrigin + '/' + s.code }}</a></p>
+            <div class="summary">
+              <div class="kpis">
+                <div class="kpi"><span class="label">Total (últimos 7 dias)</span><span class="value">{{ s.last7DaysHits }}</span></div>
+              </div>
+              <table class="table">
+                <thead>
+                  <tr>
+                    <th>Data</th>
+                    <th class="numeric">Acessos</th>
+                  </tr>
+                </thead>
+                <ng-container *ngIf="dailyWithHits(s).length > 0; else emptyDaily">
+                  <tbody>
+                    <tr *ngFor="let d of dailyWithHitsSorted(s)">
+                      <td>{{ d.date | date:'dd/MM/yyyy' }}</td>
+                      <td class="numeric">{{ d.hits }}</td>
+                    </tr>
+                  </tbody>
+                </ng-container>
+              </table>
+              <ng-template #emptyDaily>
+                <p class="muted">Sem acessos nos últimos 7 dias</p>
+              </ng-template>
+            </div>
           </div>
         </article>
 
@@ -142,18 +165,29 @@ import { QueriesFacade } from '../state/queries.facade';
     `.table{width:100%;border-collapse:collapse;margin-top:8px}`,
     `.table th,.table td{border-bottom:1px solid #e5e7eb;padding:8px;text-align:left}`,
     `.table th.numeric,.table td.numeric{text-align:right}`,
-    `.truncate{max-width:380px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}`
+    `.truncate{max-width:380px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}`,
+    `.summary{margin-top:8px}`,
+    `.kpis{display:flex;gap:16px;margin:8px 0}`,
+    `.kpi{background:#f6f8fa;border:1px solid #e5e7eb;border-radius:6px;padding:8px 12px}`,
+    `.kpi .label{display:block;color:#6b7280;font-size:12px}`,
+    `.kpi .value{display:block;font-size:18px;font-weight:600}`
   ],
   changeDetection: ChangeDetectionStrategy.OnPush
 })
-export default class QueriesPageComponent {
+export default class QueriesPageComponent implements OnInit {
   private readonly fb = inject(FormBuilder);
   readonly facade = inject(QueriesFacade);
-  readonly backendOrigin: string = typeof window !== 'undefined' && window.__ENV__?.API_BASE_URL
-    ? String(window.__ENV__?.API_BASE_URL).replace(/\/$/, '')
-    : (typeof window !== 'undefined'
-        ? `${window.location.protocol}//${window.location.hostname}:8080`
-        : 'http://localhost:8080');
+  readonly backendOrigin: string = (() => {
+    const hasWindow = typeof window !== 'undefined';
+    const raw = hasWindow && window.__ENV__?.API_BASE_URL ? String(window.__ENV__?.API_BASE_URL) : '';
+    if (raw) {
+      // Remove barra final e sufixo /api se presente
+      return raw.replace(/\/$/, '').replace(/\/api$/, '');
+    }
+    // Fallback para backend padrão em dev: porta 8081
+    if (hasWindow) return `${window.location.protocol}//${window.location.hostname}:8081`;
+    return 'http://localhost:8081';
+  })();
 
   readonly statsForm = this.fb.nonNullable.group({
     code: ['', [Validators.required, Validators.pattern(/^[A-Za-z0-9]{5}$/)]]
@@ -191,4 +225,15 @@ export default class QueriesPageComponent {
   }
 
   trackByCode = (_: number, item: { code: string }): string => item.code;
+
+  
+  dailyWithHits(s: { daily?: ReadonlyArray<{ date: string | Date; hits: number | string }> }): ReadonlyArray<{ date: string | Date; hits: number | string }>{
+    const list = s?.daily ?? [];
+    return list.filter(d => Number(d.hits) > 0);
+  }
+
+  dailyWithHitsSorted(s: { daily?: ReadonlyArray<{ date: string | Date; hits: number | string }> }): ReadonlyArray<{ date: string | Date; hits: number | string }>{
+    const filtered = this.dailyWithHits(s);
+    return filtered.slice().sort((a, b) => new Date(b.date as any).getTime() - new Date(a.date as any).getTime());
+  }
 }
