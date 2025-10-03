@@ -29,7 +29,7 @@ spring:
   mvc:
     throw-exception-if-no-handler-found: true
 server:
-  port: ${PORT:8081}
+  port: ${PORT:8080}
 management:
   endpoints:
     web:
