@@ -8,6 +8,7 @@ import br.corp.shortener.dto.StatsCodeSummaryResponse;
 import br.corp.shortener.entities.ShortUrl;
 import br.corp.shortener.repositories.ShortUrlAccessRepository;
 import br.corp.shortener.services.UrlShortenerService;
+import br.corp.shortener.services.TopRankingCache;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -35,11 +36,13 @@ public class StatsController {
 
     private final UrlShortenerService service;
     private final ShortUrlAccessRepository accessRepository;
+    private final TopRankingCache topRankingCache;
     private static final Logger log = LoggerFactory.getLogger(StatsController.class);
 
-    public StatsController(UrlShortenerService service, ShortUrlAccessRepository accessRepository) {
+    public StatsController(UrlShortenerService service, ShortUrlAccessRepository accessRepository, TopRankingCache topRankingCache) {
         this.service = service;
         this.accessRepository = accessRepository;
+        this.topRankingCache = topRankingCache;
     }
 
     @GetMapping("/stats/{code:[A-Za-z0-9]{5}}")
@@ -57,7 +60,8 @@ public class StatsController {
             ErrorResponse errorResponse = new ErrorResponse("URL não encontrada", "O código informado não existe");
             return ResponseEntity.status(HttpStatus.NOT_FOUND).body(errorResponse);
         }
-        long hits = accessRepository.countByShortUrl(su);
+        Long cachedHits = topRankingCache.getHits(su.getCode());
+        long hits = cachedHits != null ? cachedHits : accessRepository.countByShortUrl(su);
         log.info("Stats found: code={}, hits={}", su.getCode(), hits);
         StatsResponse resp = new StatsResponse(su.getCode(), su.getOriginalUrl(), hits);
         return ResponseEntity.ok(resp);
@@ -127,7 +131,8 @@ public class StatsController {
         Instant now = Instant.now();
         Instant cutoff = now.minus(7, ChronoUnit.DAYS);
 
-        long totalHits = accessRepository.countByShortUrl(su);
+        Long cachedHits = topRankingCache.getHits(su.getCode());
+        long totalHits = cachedHits != null ? cachedHits : accessRepository.countByShortUrl(su);
         long last7DaysHits = accessRepository.countByShortUrlAndAccessedAtAfter(su, cutoff);
 
         ZoneId zone = ZoneOffset.UTC;

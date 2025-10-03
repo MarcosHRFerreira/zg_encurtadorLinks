@@ -83,6 +83,11 @@ public class TopRankingCache {
         return entityByCode.get(code);
     }
 
+    public Long getHits(String code) {
+        if (code == null) return null;
+        return hitsByCode.get(code);
+    }
+
     public void onAccess(ShortUrl su) {
         String code = su.getCode();
         Long current = hitsByCode.get(code);
