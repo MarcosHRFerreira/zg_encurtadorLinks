@@ -62,11 +62,17 @@ public class LinkController {
     public ResponseEntity<ShortenResponse> shorten(@Valid @RequestBody ShortenRequest request) {
         log.info("Shorten endpoint called: url={}, customCodeProvided={}", request.url(), request.code() != null);
         ShortUrl shortUrl = service.shorten(request.url(), request.code());
-        String fullShortUrl = org.springframework.web.servlet.support.ServletUriComponentsBuilder
-                .fromCurrentRequestUri()
-                .replacePath("/" + shortUrl.getCode())
-                .build()
-                .toUriString();
+        String fullShortUrl;
+        try {
+            fullShortUrl = org.springframework.web.servlet.support.ServletUriComponentsBuilder
+                    .fromCurrentRequestUri()
+                    .replacePath("/" + shortUrl.getCode())
+                    .build()
+                    .toUriString();
+        } catch (IllegalStateException _e) {
+            // Sem contexto de requisição (ex.: testes unitários): usa caminho relativo
+            fullShortUrl = "/" + shortUrl.getCode();
+        }
         ShortenResponse body = new ShortenResponse(shortUrl.getId(), shortUrl.getOriginalUrl(), shortUrl.getCode(), shortUrl.getCreatedAt(), fullShortUrl);
         log.info("Shorten created: code={}, location=/{}", shortUrl.getCode(), shortUrl.getCode());
         return ResponseEntity.created(URI.create("/" + shortUrl.getCode())).body(body);

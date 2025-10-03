@@ -44,12 +44,24 @@ import { QueriesFacade } from '../state/queries.facade';
             <ng-container *ngIf="!facade.rankingError()">
               <ng-container *ngIf="facade.ranking() as items">
                 <ng-container *ngIf="items.length > 0; else emptyRanking">
-                  <ol class="ranking">
-                    <li *ngFor="let item of items; trackBy: trackByCode">
-                      <span class="code">{{ item.code }}</span>
-                      <span class="hits">{{ item.hits }} acesso(s)</span>
-                    </li>
-                  </ol>
+                  <table class="table">
+                    <thead>
+                      <tr>
+                        <th>#</th>
+                        <th>Código</th>
+                        <th>URL curta</th>
+                        <th class="numeric">Acessos</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      <tr *ngFor="let item of items; let i = index; trackBy: trackByCode">
+                        <td>{{ i + 1 }}</td>
+                        <td class="code">{{ item.code }}</td>
+                        <td class="truncate"><a [href]="backendOrigin + '/' + item.code" target="_blank" rel="noopener">{{ backendOrigin + '/' + item.code }}</a></td>
+                        <td class="numeric">{{ item.hits }}</td>
+                      </tr>
+                    </tbody>
+                  </table>
                 </ng-container>
               </ng-container>
               <ng-template #emptyRanking>
@@ -147,7 +159,7 @@ export default class QueriesPageComponent {
     code: ['', [Validators.required, Validators.pattern(/^[A-Za-z0-9]{5}$/)]]
   });
 
-  readonly pageSizeOptions = [5, 10, 20, 50] as const;
+  readonly pageSizeOptions = [10, 20, 30, 40, 50] as const;
 
   ngOnInit(): void {
     void this.facade.fetchRanking();

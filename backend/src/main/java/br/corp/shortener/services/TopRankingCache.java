@@ -25,10 +25,12 @@ public class TopRankingCache {
     private final ShortUrlRepository shortUrlRepository;
     private final ShortUrlAccessRepository accessRepository;
 
-    // Mantém mapping code -> hits para os TOP 5
+    // Mantém mapping code -> hits para os TOP N (Top-100)
     private final Map<String, Long> hitsByCode = new LinkedHashMap<>();
-    // Mantém a entidade ShortUrl para códigos do TOP 5
+    // Mantém a entidade ShortUrl para códigos do TOP N
     private final Map<String, ShortUrl> entityByCode = new LinkedHashMap<>();
+
+    private static final int TOP_LIMIT = 100;
 
     public TopRankingCache(ShortUrlRepository shortUrlRepository, ShortUrlAccessRepository accessRepository) {
         this.shortUrlRepository = shortUrlRepository;
@@ -38,25 +40,25 @@ public class TopRankingCache {
     @PostConstruct
     public void preload() {
         try {
-            log.info("Preloading top-5 ranking cache");
+            log.info("Preloading top-{} ranking cache", TOP_LIMIT);
             List<RankingItem> all = shortUrlRepository.findRanking();
-            List<RankingItem> top5 = all.stream().sorted(Comparator.comparingLong(r -> -r.hits())).limit(5).collect(Collectors.toList());
+            List<RankingItem> topN = all.stream().sorted(Comparator.comparingLong(r -> -r.hits())).limit(TOP_LIMIT).collect(Collectors.toList());
             hitsByCode.clear();
             entityByCode.clear();
-            for (RankingItem item : top5) {
+            for (RankingItem item : topN) {
                 hitsByCode.put(item.code(), item.hits());
                 try {
                     ShortUrl su = shortUrlRepository.findByCode(item.code()).orElse(null);
                     if (su != null) {
                         entityByCode.put(item.code(), su);
                     } else {
-                        log.debug("Top-5 preload: entity not found for code {}", item.code());
+                        log.debug("Top preload: entity not found for code {}", item.code());
                     }
                 } catch (Exception e) {
                     log.debug("Failed to load entity for code {} during preload: {}", item.code(), e.getMessage());
                 }
             }
-            log.info("Top-5 cache loaded: {}", hitsByCode.keySet());
+            log.info("Top-{} cache loaded: {}", TOP_LIMIT, hitsByCode.keySet());
         } catch (Exception e) {
             log.warn("Failed to preload ranking cache: {}", e.getMessage(), e);
             hitsByCode.clear();
@@ -92,11 +94,11 @@ public class TopRankingCache {
         }
         // Não está no cache: buscar contagem atual no banco
         long dbCount = accessRepository.countByShortUrl(su);
-        if (hitsByCode.size() < 5) {
+        if (hitsByCode.size() < TOP_LIMIT) {
             hitsByCode.put(code, dbCount);
             entityByCode.put(code, su);
         } else {
-            // Verificar se supera o menor do top-5
+            // Verificar se supera o menor do top-N
             Optional<Map.Entry<String, Long>> minEntryOpt = hitsByCode.entrySet().stream().min(Map.Entry.comparingByValue());
             if (minEntryOpt.isPresent() && dbCount > minEntryOpt.get().getValue()) {
                 String minKey = minEntryOpt.get().getKey();

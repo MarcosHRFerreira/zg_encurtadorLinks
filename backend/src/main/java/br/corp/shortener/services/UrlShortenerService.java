@@ -110,10 +110,10 @@ public class UrlShortenerService {
     }
 
     public List<RankingItem> ranking() {
-        log.info("Fetching ranking list (top-5 from cache)");
+        log.info("Fetching ranking list (top-100 from cache)");
         List<RankingItem> top = topRankingCache.getTop();
         if (top.isEmpty()) {
-            return shortUrlRepository.findRanking().stream().limit(5).toList();
+            return shortUrlRepository.findRanking().stream().limit(100).toList();
         }
         return top;
     }

@@ -26,7 +26,11 @@ import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.*;
 
+import org.mockito.junit.jupiter.MockitoSettings;
+import org.mockito.quality.Strictness;
+
 @ExtendWith(MockitoExtension.class)
+@MockitoSettings(strictness = Strictness.LENIENT)
 class UrlShortenerServiceTest {
 
     @Mock
@@ -34,6 +38,9 @@ class UrlShortenerServiceTest {
 
     @Mock
     private ShortUrlAccessRepository shortUrlAccessRepository;
+
+    @Mock
+    private TopRankingCache topRankingCache;
 
     @InjectMocks
     private UrlShortenerService service;
@@ -49,7 +56,10 @@ class UrlShortenerServiceTest {
 
     @BeforeEach
     void setup() {
-        // Nada específico; @InjectMocks já instancia o service com os repos
+        // Por padrão, não bloquear geração nem leitura do cache
+        when(topRankingCache.containsCode(anyString())).thenReturn(false);
+        when(topRankingCache.getEntity(anyString())).thenReturn(null);
+        when(topRankingCache.getTop()).thenReturn(List.of());
     }
 
     @Test
