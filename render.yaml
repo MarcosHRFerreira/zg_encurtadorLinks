@@ -6,7 +6,7 @@ services:
     rootDir: frontend
     branch: main
     buildCommand: yarn build
-    staticPublishPath: dist/frontend
+    staticPublishPath: dist/frontend/browser
     envVars:
       # Defina este valor no dashboard ao criar o Blueprint (URL pública do backend)
       - key: API_BASE_URL
