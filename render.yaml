@@ -4,6 +4,7 @@ services:
     name: zg-frontend
     runtime: static
     rootDir: frontend
+    branch: main
     buildCommand: yarn build
     staticPublishPath: dist/frontend
     envVars:
