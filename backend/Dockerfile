@@ -3,7 +3,7 @@ FROM maven:3.9.6-eclipse-temurin-21 AS builder
 WORKDIR /app
 COPY pom.xml ./
 COPY src ./src
-RUN mvn -q -DskipTests clean package
+RUN mvn -q -Dmaven.test.skip=true clean package
 
 # ---- Runtime stage ----
 FROM eclipse-temurin:21-jre
