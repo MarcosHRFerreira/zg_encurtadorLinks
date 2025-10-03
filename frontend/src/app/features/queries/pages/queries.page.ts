@@ -1,4 +1,4 @@
-import { Component, ChangeDetectionStrategy, inject, OnInit } from '@angular/core';
+import { Component, ChangeDetectionStrategy, inject, OnInit, OnDestroy } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { ReactiveFormsModule, FormBuilder, Validators } from '@angular/forms';
 import { QueriesFacade } from '../state/queries.facade';
@@ -148,10 +148,11 @@ import { QueriesFacade } from '../state/queries.facade';
     `.container{max-width:960px;margin:24px auto;padding:16px}`,
     `.cards{display:grid;grid-template-columns:1fr;gap:16px}@media(min-width:720px){.cards{grid-template-columns:1fr 1fr}}`,
     `.card{background:#fff;border:1px solid #e5e7eb;border-radius:8px;padding:16px}`,
+    `.card form .btn{margin-top:6px}`,
     `.row{display:flex;align-items:center;justify-content:space-between}`,
     `.controls{display:flex;gap:12px;align-items:center}`,
     `.pager{display:flex;gap:8px}`,
-    `.input{width:100%;padding:8px;margin:4px 0}`,
+    `.input{width:100%;max-width:280px;box-sizing:border-box;padding:8px;margin:4px 0}`,
     `.btn{padding:8px 12px;margin-top:8px;cursor:pointer}`,
     `.btn.ghost{background:transparent;border:1px solid #e5e7eb}`,
     `.error{color:#c0392b;margin-top:8px}`,
@@ -174,7 +175,7 @@ import { QueriesFacade } from '../state/queries.facade';
   ],
   changeDetection: ChangeDetectionStrategy.OnPush
 })
-export default class QueriesPageComponent implements OnInit {
+export default class QueriesPageComponent implements OnInit, OnDestroy {
   private readonly fb = inject(FormBuilder);
   readonly facade = inject(QueriesFacade);
   readonly backendOrigin: string = (() => {
@@ -196,8 +197,16 @@ export default class QueriesPageComponent implements OnInit {
   readonly pageSizeOptions = [10, 20, 30, 40, 50] as const;
 
   ngOnInit(): void {
+    // Limpa estado da estatística por código ao entrar na tela
+    this.facade.resetStats();
+    this.statsForm.reset({ code: '' });
     void this.facade.fetchRanking();
     void this.facade.fetchStatsPage();
+  }
+
+  ngOnDestroy(): void {
+    // Garante limpeza ao sair da tela (troca de rota)
+    this.facade.resetStats();
   }
 
   async onStatsSubmit(): Promise<void> {
