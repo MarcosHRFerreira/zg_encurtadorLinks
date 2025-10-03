@@ -1,0 +1,17 @@
+services:
+  # Static frontend (Angular) served via Render CDN
+  - type: web
+    name: zg-frontend
+    runtime: static
+    rootDir: frontend
+    buildCommand: yarn vercel-build
+    staticPublishPath: dist/frontend
+    envVars:
+      # Defina este valor no dashboard ao criar o Blueprint (URL pública do backend)
+      - key: API_BASE_URL
+        sync: false
+    # SPA fallback: reescreve rotas para index.html
+    routes:
+      - type: rewrite
+        source: /*
+        destination: /index.html
