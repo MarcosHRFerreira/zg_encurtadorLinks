@@ -18,12 +18,13 @@ yarn start --port 4201
 # ou
 yarn ng serve --port 4203 --host localhost
 ```
-Rotas principais:
+Rotas principais (SPA):
 - http://localhost:4201/shorten (ou http://localhost:4203/shorten)
 - http://localhost:4201/consultas (ou http://localhost:4203/consultas)
 
 Proxy para o backend:
-- O app usa `proxy.conf.json` para encaminhar chamadas à API do backend em `http://localhost:8080`.
+- Em desenvolvimento, o app usa `proxy.conf.json` para encaminhar chamadas à API do backend em `http://localhost:8080` via prefixo `/api`.
+- Ex.: frontend chama `POST /api/shorten`, `GET /api/stats/{code}`, `GET /api/ranking`.
 
 ## Geração de tipos a partir do OpenAPI do backend
 Gere os tipos TypeScript do backend (precisa do backend rodando em `http://localhost:8080`).
@@ -43,7 +44,24 @@ Resultado: arquivo gerado em `src/app/core/api/types.ts`.
     API_BASE_URL=http://localhost:8080 yarn build
     ```
   - No Vercel, configure `API_BASE_URL` em Production/Preview.
-- Em desenvolvimento (`yarn start`), o Angular usa `proxy.conf.json` e encaminha `/shorten`, `/stats`, `/ranking` para `http://localhost:8080`.
+- Em desenvolvimento (`yarn start`), o Angular usa `proxy.conf.json` e encaminha `/api/*` para `http://localhost:8080`.
+
+## Deploy no Render (frontend)
+- Tipo de serviço recomendado: "Static Site".
+- Build Command: use o script que injeta `API_BASE_URL` e executa o build (por exemplo, `yarn vercel-build` ou `yarn build` se já estiver configurado para escrever `public/env.js`).
+- Publish Directory: o diretório de saída do Angular (geralmente `dist/frontend` ou `dist/<nome-do-projeto>`; verifique em `angular.json`).
+- Variáveis necessárias:
+  - `API_BASE_URL`: URL pública do backend no Render (ex.: `https://<seu-backend>.onrender.com`).
+- SPA fallback: habilite o fallback de SPA para que rotas como `/shorten` sirvam `index.html` (pode ser feito via configuração de rotas de Static Site nas settings do Render ou servidor estático com fallback).
+- Observação de URLs: em produção, o interceptor do frontend remove o prefixo `/api` automaticamente ao compor a URL com `API_BASE_URL`, mapeando `POST /api/shorten` para `POST <API_BASE_URL>/shorten`.
+
+## Backend no Render
+- O backend já está preparado para a porta do Render via `server.port: ${PORT:8080}` em `application.yaml`.
+- Configure CORS para o domínio do frontend usando variáveis:
+  - `CORS_ALLOWED_ORIGINS` (lista separada por vírgula) ou `CORS_ALLOWED_ORIGIN_PATTERNS` (patterns).
+  - Ex.: `CORS_ALLOWED_ORIGINS=https://<seu-frontend>.onrender.com` ou `CORS_ALLOWED_ORIGIN_PATTERNS=https://*.onrender.com`.
+- Banco de dados: defina `SPRING_DATASOURCE_URL`, `SPRING_DATASOURCE_USERNAME`, `SPRING_DATASOURCE_PASSWORD` com as credenciais do Render PostgreSQL.
+- Health check: opcional usar `/actuator/health` nas configurações do serviço.
 
 ## Scripts úteis
 ```bash

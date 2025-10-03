@@ -22,11 +22,11 @@ describe('Queries Page (integration)', () => {
     const fixture = TestBed.createComponent(QueriesPageComponent);
     fixture.detectChanges();
 
-    const reqRanking = httpMock.expectOne('/ranking');
+    const reqRanking = httpMock.expectOne('/api/ranking');
     expect(reqRanking.request.method).toBe('GET');
     reqRanking.flush([{ code: 'AAAAA', hits: 10 }]);
 
-    const reqStatsPage = httpMock.expectOne('/stats?page=0&size=10');
+    const reqStatsPage = httpMock.expectOne('/api/stats?page=0&size=10');
     expect(reqStatsPage.request.method).toBe('GET');
     reqStatsPage.flush({
       content: [
@@ -51,7 +51,7 @@ describe('Queries Page (integration)', () => {
     comp.statsForm.setValue({ code: 'ABCDE' });
     const submitPromise = comp.onStatsSubmit();
 
-    const req = httpMock.expectOne('/stats/ABCDE');
+    const req = httpMock.expectOne('/api/stats/ABCDE');
     expect(req.request.method).toBe('GET');
     req.flush({ code: 'ABCDE', originalUrl: 'https://ex.com/a', hits: 42 });
 
@@ -68,7 +68,7 @@ describe('Queries Page (integration)', () => {
     comp.statsForm.setValue({ code: 'ZZZZZ' });
     const submitPromise = comp.onStatsSubmit();
 
-    const req = httpMock.expectOne('/stats/ZZZZZ');
+    const req = httpMock.expectOne('/api/stats/ZZZZZ');
     expect(req.request.method).toBe('GET');
     req.flush({ error: 'not-found' }, { status: 404, statusText: 'Not Found' });
 
@@ -84,11 +84,11 @@ describe('Queries Page (integration)', () => {
 
     // init: página 0, size 10
     fixture.detectChanges();
-    const reqRanking = httpMock.expectOne('/ranking');
+    const reqRanking = httpMock.expectOne('/api/ranking');
     expect(reqRanking.request.method).toBe('GET');
     reqRanking.flush([{ code: 'AAAAA', hits: 10 }]);
 
-    const reqInit = httpMock.expectOne('/stats?page=0&size=10');
+    const reqInit = httpMock.expectOne('/api/stats?page=0&size=10');
     reqInit.flush({
       content: [
         { code: 'AAAAA', originalUrl: 'https://ex.com/a', hits: 10 },
@@ -111,7 +111,7 @@ describe('Queries Page (integration)', () => {
     select.appendChild(opt);
 
     const changePromise = comp.onPageSizeChange({ target: select } as unknown as Event);
-    const reqSize = httpMock.expectOne('/stats?page=0&size=5');
+    const reqSize = httpMock.expectOne('/api/stats?page=0&size=5');
     expect(reqSize.request.method).toBe('GET');
     reqSize.flush({
       content: [
@@ -129,7 +129,7 @@ describe('Queries Page (integration)', () => {
     await changePromise;
 
     // Em alguns ambientes, a alteração de page size pode disparar uma segunda chamada inicial; trate-a se existir
-    const maybeExtraSize = httpMock.match('/stats?page=0&size=5');
+    const maybeExtraSize = httpMock.match('/api/stats?page=0&size=5');
     for (const extra of maybeExtraSize) {
       extra.flush({
         content: [
@@ -148,7 +148,7 @@ describe('Queries Page (integration)', () => {
 
     // Navegar para próxima página (page=1, size=5): capture a requisição ANTES do flush e aguarde a Promise DEPOIS
     const nextPromise = comp.nextPage();
-    const reqNext = httpMock.expectOne('/stats?page=1&size=5');
+    const reqNext = httpMock.expectOne('/api/stats?page=1&size=5');
     expect(reqNext.request.method).toBe('GET');
     reqNext.flush({
       content: [
@@ -166,7 +166,7 @@ describe('Queries Page (integration)', () => {
     await nextPromise;
 
     // Em alguns ambientes, a navegação pode disparar chamadas duplicadas para a mesma página; trate-as se existirem
-    const maybeExtraNext = httpMock.match('/stats?page=1&size=5');
+    const maybeExtraNext = httpMock.match('/api/stats?page=1&size=5');
     for (const extra of maybeExtraNext) {
       extra.flush({
         content: [
@@ -187,7 +187,7 @@ describe('Queries Page (integration)', () => {
     await comp.nextPage();
 
     // Drenar qualquer request pendente inesperada para a mesma URL (ambientes com dupla emissão)
-    const leftover = httpMock.match('/stats?page=0&size=5');
+    const leftover = httpMock.match('/api/stats?page=0&size=5');
     for (const extra of leftover) {
       extra.flush({
         content: [
@@ -204,7 +204,7 @@ describe('Queries Page (integration)', () => {
       });
     }
 
-    const leftoverNext = httpMock.match('/stats?page=1&size=5');
+    const leftoverNext = httpMock.match('/api/stats?page=1&size=5');
     for (const extra of leftoverNext) {
       extra.flush({
         content: [
@@ -223,7 +223,7 @@ describe('Queries Page (integration)', () => {
 
     // Yield microtasks e drenar qualquer nova requisição para a mesma URL emitida tardiamente
     await Promise.resolve();
-    const afterTickNext = httpMock.match('/stats?page=1&size=5');
+    const afterTickNext = httpMock.match('/api/stats?page=1&size=5');
     for (const extra of afterTickNext) {
       extra.flush({
         content: [

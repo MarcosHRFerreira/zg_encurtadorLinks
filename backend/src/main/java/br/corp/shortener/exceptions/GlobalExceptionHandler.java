@@ -6,6 +6,7 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.validation.FieldError;
 import org.springframework.web.bind.MethodArgumentNotValidException;
+import org.springframework.web.HttpRequestMethodNotSupportedException;
 import org.springframework.web.bind.annotation.ControllerAdvice;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.servlet.NoHandlerFoundException;
@@ -47,6 +48,19 @@ public class GlobalExceptionHandler {
     public ResponseEntity<ErrorResponse> handleNoResourceFound(NoResourceFoundException ex) {
         ErrorResponse response = new ErrorResponse("URL não encontrada", "O recurso solicitado não existe");
         return ResponseEntity.status(HttpStatus.NOT_FOUND).body(response);
+    }
+
+    @ExceptionHandler(HttpRequestMethodNotSupportedException.class)
+    public ResponseEntity<ErrorResponse> handleMethodNotAllowed(HttpRequestMethodNotSupportedException ex) {
+        String method = ex.getMethod();
+        String supported = (ex.getSupportedMethods() != null && ex.getSupportedMethods().length > 0)
+                ? String.join(", ", ex.getSupportedMethods())
+                : "";
+        String message = supported.isEmpty()
+                ? "Método não permitido para este recurso"
+                : "Método '" + method + "' não permitido. Suportado: " + supported;
+        ErrorResponse response = new ErrorResponse("Método não permitido", message);
+        return ResponseEntity.status(HttpStatus.METHOD_NOT_ALLOWED).body(response);
     }
 
     @ExceptionHandler(Exception.class)

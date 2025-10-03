@@ -10,6 +10,7 @@ export type ShortUrlDomain = Readonly<{
   code: string;
   originalUrl: string;
   createdAt: string;
+  shortUrl?: string;
 }>;
 
 @Injectable({ providedIn: 'root' })
@@ -17,7 +18,7 @@ export class ShortenAdapter {
   private readonly http = inject(HttpClient);
 
   async create(dto: components['schemas']['ShortenRequest']): Promise<ShortUrlDomain> {
-    const res = await firstValueFrom(this.http.post<ShortUrlDTO>('/shorten', dto));
+    const res = await firstValueFrom(this.http.post<ShortUrlDTO>('/api/shorten', dto));
     if (!res) throw new Error('Resposta vazia');
     return this.toDomain(res);
   }
@@ -27,6 +28,7 @@ export class ShortenAdapter {
     const code = dto.code;
     const originalUrl = dto.originalUrl;
     const createdAt = dto.createdAt;
+    const shortUrl = (dto as unknown as { shortUrl?: string }).shortUrl;
 
     if (
       typeof id !== 'number' ||
@@ -37,6 +39,10 @@ export class ShortenAdapter {
       throw new Error('Resposta inválida do servidor');
     }
 
-    return { id, code, originalUrl, createdAt } as const;
+    const domain: ShortUrlDomain = { id: Number(id), code: String(code), originalUrl: String(originalUrl), createdAt: String(createdAt) };
+    if (typeof shortUrl === 'string' && shortUrl.length > 0) {
+      return { ...domain, shortUrl };
+    }
+    return domain;
   }
 }

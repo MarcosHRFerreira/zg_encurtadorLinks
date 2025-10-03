@@ -13,7 +13,7 @@ public class CorsConfig implements WebMvcConfigurer {
   @Value("${CORS_ALLOWED_ORIGINS:*}")
   private String allowedOrigins;
 
-  @Value("${CORS_ALLOWED_ORIGIN_PATTERNS:}")
+  @Value("${CORS_ALLOWED_ORIGIN_PATTERNS:*}")
   private String allowedOriginPatterns;
 
   @Override
@@ -31,11 +31,15 @@ public class CorsConfig implements WebMvcConfigurer {
     var mapping = registry.addMapping("/**")
       .allowedMethods("GET", "POST", "PUT", "DELETE", "OPTIONS")
       .allowedHeaders("*")
+      .exposedHeaders("Location")
       .allowCredentials(false)
       .maxAge(3600);
 
     if (patterns.length > 0) {
       mapping.allowedOriginPatterns(patterns);
+    } else if (origins.length == 1 && "*".equals(origins[0])) {
+      // Quando '*' é usado, prefira patterns para cobrir todos os casos de CORS
+      mapping.allowedOriginPatterns("*");
     } else {
       mapping.allowedOrigins(origins);
     }

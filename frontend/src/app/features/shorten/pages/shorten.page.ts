@@ -10,7 +10,7 @@ import { ShortenFacade } from '../state/shorten.facade';
   template: `
     <section class="container">
       <h2>Encurtar URL</h2>
-      <form [formGroup]="form" (ngSubmit)="onSubmit()">
+      <form [formGroup]="form" (submit)="$event.preventDefault()" (ngSubmit)="onSubmit($event)" method="post" novalidate>
         <label>URL</label>
         <input class="input" type="url" formControlName="url" placeholder="https://..." required />
         <div class="error" *ngIf="form.controls.url.invalid && form.controls.url.touched">
@@ -20,12 +20,18 @@ import { ShortenFacade } from '../state/shorten.facade';
         <label>Código (opcional)</label>
         <input class="input" type="text" formControlName="code" maxlength="5" pattern="^[A-Za-z0-9]{5}$" />
 
-        <button class="btn" [disabled]="facade.loading() || form.invalid">Encurtar</button>
+        <button class="btn" type="submit" [disabled]="facade.loading() || form.invalid">Encurtar</button>
       </form>
 
       <div class="result" *ngIf="facade.result() as r">
-        <p>Seu link: <strong>{{ r.code }}</strong></p>
-        <p>Original: {{ r.originalUrl }}</p>
+        <p>Seu link:
+          <strong>
+            <a [href]="(r.shortUrl ?? (backendOrigin + '/' + r.code))" target="_blank" rel="noopener">
+              {{ r.shortUrl ?? (backendOrigin + '/' + r.code) }}
+            </a>
+          </strong>
+        </p>
+        <p>Original: <a [href]="r.originalUrl" target="_blank" rel="noopener">{{ r.originalUrl }}</a></p>
         <p>Criado em: {{ r.createdAt | date:'short' }}</p>
       </div>
 
@@ -45,12 +51,19 @@ export default class ShortenPageComponent {
   private readonly fb = inject(FormBuilder);
   readonly facade = inject(ShortenFacade);
 
+  readonly backendOrigin: string = typeof window !== 'undefined' && window.__ENV__?.API_BASE_URL
+    ? String(window.__ENV__?.API_BASE_URL).replace(/\/$/, '')
+    : (typeof window !== 'undefined'
+        ? `${window.location.protocol}//${window.location.hostname}:8080`
+        : 'http://localhost:8080');
+
   readonly form = this.fb.nonNullable.group({
     url: ['', [Validators.required, Validators.pattern(/https?:\/\/.+/)]],
     code: ['']
   });
 
-  async onSubmit(): Promise<void> {
+  async onSubmit(event?: Event): Promise<void> {
+    if (event) event.preventDefault();
     if (this.form.invalid) return;
     const { url, code } = this.form.getRawValue();
     const payload: { url: string; code?: string } = { url };

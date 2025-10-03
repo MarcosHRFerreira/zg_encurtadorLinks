@@ -37,7 +37,7 @@ export class StatsAdapter {
   private readonly http = inject(HttpClient);
 
   async getByCode(code: string): Promise<StatsDomain> {
-    const res = await firstValueFrom(this.http.get<StatsDTO>(`/stats/${encodeURIComponent(code)}`));
+    const res = await firstValueFrom(this.http.get<StatsDTO>(`/api/stats/${encodeURIComponent(code)}`));
     if (!res) throw new Error('Resposta vazia');
     return this.toDomain(res);
   }
@@ -54,7 +54,7 @@ export class StatsAdapter {
         last: boolean;
         numberOfElements: number;
         empty: boolean;
-      }>(`/stats?page=${encodeURIComponent(page)}&size=${encodeURIComponent(size)}`)
+      }>(`/api/stats?page=${encodeURIComponent(page)}&size=${encodeURIComponent(size)}`)
     );
 
     const content = Array.isArray(dto.content) ? dto.content.map(this.toDomain) : [];
@@ -88,7 +88,7 @@ export class RankingAdapter {
   private readonly http = inject(HttpClient);
 
   async list(): Promise<ReadonlyArray<RankingDomainItem>> {
-    const res = await firstValueFrom(this.http.get<RankingItemDTO[] | RankingItemDTO>(`/ranking`));
+    const res = await firstValueFrom(this.http.get<RankingItemDTO[] | RankingItemDTO>(`/api/ranking`));
     const arr: RankingItemDTO[] = Array.isArray(res) ? res : res ? [res] : [];
     return arr.map(this.toDomain);
   }

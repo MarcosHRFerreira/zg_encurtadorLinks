@@ -32,10 +32,12 @@ public class UrlShortenerService {
 
     private final ShortUrlRepository shortUrlRepository;
     private final ShortUrlAccessRepository shortUrlAccessRepository;
+    private final TopRankingCache topRankingCache;
 
-    public UrlShortenerService(ShortUrlRepository shortUrlRepository, ShortUrlAccessRepository shortUrlAccessRepository) {
+    public UrlShortenerService(ShortUrlRepository shortUrlRepository, ShortUrlAccessRepository shortUrlAccessRepository, TopRankingCache topRankingCache) {
         this.shortUrlRepository = shortUrlRepository;
         this.shortUrlAccessRepository = shortUrlAccessRepository;
+        this.topRankingCache = topRankingCache;
     }
 
     @Transactional
@@ -44,6 +46,10 @@ public class UrlShortenerService {
         if (customCode != null) {
             if (shortUrlRepository.existsByCode(customCode)) {
                 log.warn("Duplicate custom code detected: {}", customCode);
+                throw new DuplicateCodeException(customCode);
+            }
+            if (topRankingCache.containsCode(customCode)) {
+                log.warn("Duplicate custom code detected in cache: {}", customCode);
                 throw new DuplicateCodeException(customCode);
             }
             final ShortUrl candidate = new ShortUrl(originalUrl, customCode, Instant.now());
@@ -62,6 +68,10 @@ public class UrlShortenerService {
         for (int attempt = 0; attempt < maxAttempts; attempt++) {
             final String code = generateRandomCode();
             log.debug("Attempt {} generating random code: {}", attempt + 1, code);
+            if (topRankingCache.containsCode(code)) {
+                log.debug("Generated code {} is present in cache; retrying", code);
+                continue;
+            }
             final ShortUrl candidate = new ShortUrl(originalUrl, code, Instant.now());
             try {
                 final ShortUrl saved = shortUrlRepository.saveAndFlush(candidate);
@@ -78,6 +88,12 @@ public class UrlShortenerService {
 
     public ShortUrl getByCode(String code) {
         log.debug("Fetching ShortUrl by code: {}", code);
+        // Tenta pegar a entidade diretamente do Top-5
+        ShortUrl topEntity = topRankingCache.getEntity(code);
+        if (topEntity != null) {
+            return topEntity;
+        }
+        // Fallback: busca no banco
         return shortUrlRepository.findByCode(code).orElse(null);
     }
 
@@ -86,11 +102,20 @@ public class UrlShortenerService {
         log.info("Registering access: code={}, userAgent={}, referer={}", shortUrl.getCode(), safe(userAgent), safe(referer));
         ShortUrlAccess access = new ShortUrlAccess(shortUrl, Instant.now(), userAgent, referer);
         shortUrlAccessRepository.save(access);
+        try {
+            topRankingCache.onAccess(shortUrl);
+        } catch (Exception e) {
+            log.warn("Failed to update top ranking cache on access for code={}: {}", shortUrl.getCode(), e.getMessage());
+        }
     }
 
     public List<RankingItem> ranking() {
-        log.info("Fetching ranking list");
-        return shortUrlRepository.findRanking();
+        log.info("Fetching ranking list (top-5 from cache)");
+        List<RankingItem> top = topRankingCache.getTop();
+        if (top.isEmpty()) {
+            return shortUrlRepository.findRanking().stream().limit(5).toList();
+        }
+        return top;
     }
 
     public Page<StatsResponse> listStats(Pageable pageable) {

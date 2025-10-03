@@ -25,7 +25,7 @@ describe('Queries Adapters (unit)', () => {
 
   it('StatsAdapter.getByCode deve mapear sucesso', async () => {
     const promise = stats.getByCode('ABCDE');
-    const req = httpMock.expectOne('/stats/ABCDE');
+    const req = httpMock.expectOne('/api/stats/ABCDE');
     expect(req.request.method).toBe('GET');
     req.flush({ code: 'ABCDE', originalUrl: 'https://ex.com/a', hits: 42 });
     await expect(promise).resolves.toEqual({ code: 'ABCDE', originalUrl: 'https://ex.com/a', hits: 42 });
@@ -33,7 +33,7 @@ describe('Queries Adapters (unit)', () => {
 
   it('StatsAdapter.getByCode deve lançar quando resposta vazia', async () => {
     const promise = stats.getByCode('XXXXX');
-    const req = httpMock.expectOne('/stats/XXXXX');
+    const req = httpMock.expectOne('/api/stats/XXXXX');
     expect(req.request.method).toBe('GET');
     req.flush(null);
     await expect(promise).rejects.toThrow('Resposta vazia');
@@ -41,14 +41,14 @@ describe('Queries Adapters (unit)', () => {
 
   it('StatsAdapter.getByCode deve lançar quando tipos inválidos', async () => {
     const promise = stats.getByCode('ABCDE');
-    const req = httpMock.expectOne('/stats/ABCDE');
+    const req = httpMock.expectOne('/api/stats/ABCDE');
     req.flush({ code: 'ABCDE', originalUrl: 123, hits: 42 });
     await expect(promise).rejects.toThrow('Resposta inválida do servidor');
   });
 
   it('StatsAdapter.list deve mapear página', async () => {
     const promise = stats.list(0, 10);
-    const req = httpMock.expectOne('/stats?page=0&size=10');
+    const req = httpMock.expectOne('/api/stats?page=0&size=10');
     expect(req.request.method).toBe('GET');
     req.flush({
       content: [
@@ -82,7 +82,7 @@ describe('Queries Adapters (unit)', () => {
 
   it('StatsAdapter.list deve lançar quando item inválido', async () => {
     const promise = stats.list(0, 10);
-    const req = httpMock.expectOne('/stats?page=0&size=10');
+    const req = httpMock.expectOne('/api/stats?page=0&size=10');
     req.flush({
       content: [
         { code: 'AAAAA', hits: 10 },
@@ -101,7 +101,7 @@ describe('Queries Adapters (unit)', () => {
 
   it('RankingAdapter.list deve mapear array', async () => {
     const promise = ranking.list();
-    const req = httpMock.expectOne('/ranking');
+    const req = httpMock.expectOne('/api/ranking');
     expect(req.request.method).toBe('GET');
     req.flush([
       { code: 'AAAAA', hits: 10 },
@@ -115,14 +115,14 @@ describe('Queries Adapters (unit)', () => {
 
   it('RankingAdapter.list deve mapear objeto único', async () => {
     const promise = ranking.list();
-    const req = httpMock.expectOne('/ranking');
+    const req = httpMock.expectOne('/api/ranking');
     req.flush({ code: 'AAAAA', hits: 10 });
     await expect(promise).resolves.toEqual([{ code: 'AAAAA', hits: 10 }]);
   });
 
   it('RankingAdapter.list deve lançar quando tipos inválidos', async () => {
     const promise = ranking.list();
-    const req = httpMock.expectOne('/ranking');
+    const req = httpMock.expectOne('/api/ranking');
     req.flush({ code: 'AAAAA', hits: 'x' });
     await expect(promise).rejects.toThrow('Resposta inválida do servidor');
   });

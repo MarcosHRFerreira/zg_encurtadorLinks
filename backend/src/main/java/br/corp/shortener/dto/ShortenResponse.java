@@ -8,5 +8,6 @@ public record ShortenResponse(
         @Schema(description = "Identificador interno", example = "1") Long id,
         @Schema(description = "URL original") String originalUrl,
         @Schema(description = "Código da URL encurtada", example = "ABCDE") String code,
-        @Schema(description = "Data de criação em UTC") Instant createdAt
+        @Schema(description = "Data de criação em UTC") Instant createdAt,
+        @Schema(description = "URL encurtada completa", example = "http://localhost:8080/ABCDE") String shortUrl
 ) {}

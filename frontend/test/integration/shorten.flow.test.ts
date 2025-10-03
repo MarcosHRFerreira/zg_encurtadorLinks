@@ -35,7 +35,7 @@ describe('Shorten Flow (integration)', () => {
 
     const submitPromise = comp.onSubmit();
 
-    const req = httpMock.expectOne('/shorten');
+    const req = httpMock.expectOne('/api/shorten');
     expect(req.request.method).toBe('POST');
     expect(req.request.body).toEqual({ url: 'https://example.com', code: 'abc12' });
 
@@ -55,7 +55,7 @@ describe('Shorten Flow (integration)', () => {
 
     const submitPromise = comp.onSubmit();
 
-    const req = httpMock.expectOne('/shorten');
+    const req = httpMock.expectOne('/api/shorten');
     expect(req.request.method).toBe('POST');
     expect(req.request.body).toEqual({ url: 'https://invalid' });
 

@@ -1,1 +1,1 @@
-window.__ENV__ = { API_BASE_URL: '' };
+"window.__ENV__={API_BASE_URL:'${API_BASE_URL:-}'}"  

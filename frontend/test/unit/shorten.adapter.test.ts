@@ -21,7 +21,7 @@ describe('ShortenAdapter (unit)', () => {
   it('deve mapear a resposta para domínio', async () => {
     const promise = adapter.create({ url: 'https://example.com', code: 'abc12' });
 
-    const req = httpMock.expectOne('/shorten');
+    const req = httpMock.expectOne('/api/shorten');
     expect(req.request.method).toBe('POST');
     req.flush({ id: 1, code: 'abc12', originalUrl: 'https://example.com', createdAt: '2025-01-01T00:00:00Z' });
 
@@ -31,7 +31,7 @@ describe('ShortenAdapter (unit)', () => {
   it('deve lançar erro quando resposta vazia', async () => {
     const promise = adapter.create({ url: 'https://example.com' });
 
-    const req = httpMock.expectOne('/shorten');
+    const req = httpMock.expectOne('/api/shorten');
     expect(req.request.method).toBe('POST');
     req.flush(null);
 
