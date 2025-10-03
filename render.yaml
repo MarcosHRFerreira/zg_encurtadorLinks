@@ -4,7 +4,7 @@ services:
     name: zg-frontend
     runtime: static
     rootDir: frontend
-    buildCommand: yarn vercel-build
+    buildCommand: yarn build
     staticPublishPath: dist/frontend
     envVars:
       # Defina este valor no dashboard ao criar o Blueprint (URL pública do backend)
