@@ -24,7 +24,7 @@ describe('Queries Page (integration)', () => {
 
     const reqRanking = httpMock.expectOne('/api/ranking');
     expect(reqRanking.request.method).toBe('GET');
-    reqRanking.flush([{ code: 'AAAAA', hits: 10 }]);
+    reqRanking.flush([{ code: 'AAAAA', originalUrl: 'https://ex.com/a' }]);
 
     const reqStatsPage = httpMock.expectOne('/api/stats?page=0&size=10');
     expect(reqStatsPage.request.method).toBe('GET');
@@ -51,14 +51,27 @@ describe('Queries Page (integration)', () => {
     comp.statsForm.setValue({ code: 'ABCDE' });
     const submitPromise = comp.onStatsSubmit();
 
-    const req = httpMock.expectOne('/api/stats/ABCDE');
+    const req = httpMock.expectOne('/api/stats/ABCDE/summary');
     expect(req.request.method).toBe('GET');
-    req.flush({ code: 'ABCDE', originalUrl: 'https://ex.com/a', hits: 42 });
+    req.flush({
+      code: 'ABCDE',
+      originalUrl: 'https://ex.com/a',
+      totalHits: 100,
+      last7DaysHits: 0,
+      daily: [
+        { date: '2024-01-01', hits: 20 },
+        { date: '2024-01-02', hits: 22 },
+        { date: '2024-01-03', hits: 0 },
+      ],
+    });
 
     await submitPromise;
 
     expect(comp.facade.statsError()).toBeNull();
-    expect(comp.facade.stats()).toEqual({ code: 'ABCDE', originalUrl: 'https://ex.com/a', hits: 42 });
+    const s = comp.facade.stats();
+    expect(s?.code).toBe('ABCDE');
+    expect(s?.originalUrl).toBe('https://ex.com/a');
+    expect(s?.last7DaysHits).toBe(42);
   });
 
   it('deve lidar com 404 ao consultar estatísticas por código', async () => {
@@ -68,7 +81,7 @@ describe('Queries Page (integration)', () => {
     comp.statsForm.setValue({ code: 'ZZZZZ' });
     const submitPromise = comp.onStatsSubmit();
 
-    const req = httpMock.expectOne('/api/stats/ZZZZZ');
+    const req = httpMock.expectOne('/api/stats/ZZZZZ/summary');
     expect(req.request.method).toBe('GET');
     req.flush({ error: 'not-found' }, { status: 404, statusText: 'Not Found' });
 

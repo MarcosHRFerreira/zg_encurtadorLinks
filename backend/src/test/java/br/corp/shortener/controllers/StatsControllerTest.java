@@ -5,6 +5,7 @@ import br.corp.shortener.dto.StatsResponse;
 import br.corp.shortener.entities.ShortUrl;
 import br.corp.shortener.repositories.ShortUrlAccessRepository;
 import br.corp.shortener.services.UrlShortenerService;
+import br.corp.shortener.services.TopRankingCache;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -28,6 +29,9 @@ class StatsControllerTest {
     @Mock
     private ShortUrlAccessRepository accessRepository;
 
+    @Mock
+    private TopRankingCache topRankingCache;
+
     @InjectMocks
     private StatsController controller;
 
@@ -42,7 +46,8 @@ class StatsControllerTest {
     void stats_ok() {
         ShortUrl shortUrl = su("https://ex.com", "ABCDE");
         when(service.getByCode("ABCDE")).thenReturn(shortUrl);
-        when(accessRepository.countByShortUrl(shortUrl)).thenReturn(10L);
+        when(topRankingCache.getHits("ABCDE")).thenReturn(null);
+        when(accessRepository.countByShortUrl(any(ShortUrl.class))).thenReturn(10L);
 
         ResponseEntity<?> resp = controller.stats("ABCDE");
         assertEquals(HttpStatus.OK, resp.getStatusCode());

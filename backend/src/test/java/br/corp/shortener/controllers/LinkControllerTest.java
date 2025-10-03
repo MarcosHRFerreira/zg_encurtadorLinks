@@ -61,7 +61,7 @@ class LinkControllerTest {
     @Test
     @DisplayName("ranking retorna lista do service")
     void ranking_ok() {
-        List<RankingItem> items = List.of(new RankingItem("AAA11", 2L));
+        List<RankingItem> items = List.of(new RankingItem("AAA11", "https://ex.com", 2L));
         when(service.ranking()).thenReturn(items);
 
         List<RankingItem> resp = controller.ranking();

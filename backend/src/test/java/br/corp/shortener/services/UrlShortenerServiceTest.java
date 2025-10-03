@@ -189,14 +189,17 @@ class UrlShortenerServiceTest {
     }
 
     @Test
-    @DisplayName("ranking delega para o repositório e retorna lista")
-    void ranking_returnsRepositoryData() {
-        List<RankingItem> items = List.of(new RankingItem("ABC12", 3L), new RankingItem("XYz90", 1L));
-        when(shortUrlRepository.findRanking()).thenReturn(items);
+    @DisplayName("ranking delega para o cache e retorna lista")
+    void ranking_returnsCacheData() {
+        List<RankingItem> items = List.of(
+                new RankingItem("ABC12", "https://ex.com/a", 3L),
+                new RankingItem("XYz90", "https://ex.com/b", 1L)
+        );
+        when(topRankingCache.getTop()).thenReturn(items);
 
         List<RankingItem> result = service.ranking();
         assertEquals(items, result);
-        verify(shortUrlRepository, times(1)).findRanking();
-        verifyNoMoreInteractions(shortUrlRepository);
+        verify(topRankingCache, times(1)).getTop();
+        verifyNoInteractions(shortUrlRepository);
     }
 }

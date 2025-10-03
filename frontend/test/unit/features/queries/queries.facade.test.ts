@@ -5,7 +5,7 @@ import { StatsAdapter, RankingAdapter } from 'app/features/queries/data/queries.
 
 // Unit tests para QueriesFacade cobrindo mapeamentos de erro e guardas de paginação
 
-type StatsAdapterPort = Pick<StatsAdapter, 'getByCode' | 'list'>;
+type StatsAdapterPort = Pick<StatsAdapter, 'getCodeSummary' | 'list'>;
 type RankingAdapterPort = Pick<RankingAdapter, 'list'>;
 
 describe('QueriesFacade (unit)', () => {
@@ -15,7 +15,7 @@ describe('QueriesFacade (unit)', () => {
 
   beforeEach(() => {
     statsStub = {
-      getByCode: sinon.stub(),
+      getCodeSummary: sinon.stub(),
       list: sinon.stub(),
     } as unknown as StatsAdapterPort;
 
@@ -35,14 +35,14 @@ describe('QueriesFacade (unit)', () => {
   });
 
   it('deve mapear erro 404 para "URL não encontrada"', async () => {
-    (statsStub.getByCode as sinon.SinonStub).rejects({ status: 404 });
+    (statsStub.getCodeSummary as sinon.SinonStub).rejects({ status: 404 });
     await facade.fetchStats('ABCDE');
     expect(facade.statsError()).toBe('URL não encontrada');
     expect(facade.stats()).toBeNull();
   });
 
   it('deve mapear erro genérico para "Erro ao consultar estatísticas"', async () => {
-    (statsStub.getByCode as sinon.SinonStub).rejects({ status: 500 });
+    (statsStub.getCodeSummary as sinon.SinonStub).rejects({ status: 500 });
     await facade.fetchStats('ABCDE');
     expect(facade.statsError()).toBe('Erro ao consultar estatísticas');
     expect(facade.stats()).toBeNull();

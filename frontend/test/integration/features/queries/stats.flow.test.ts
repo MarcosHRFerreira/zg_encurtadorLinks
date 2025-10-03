@@ -21,7 +21,17 @@ describe('Integração: fluxo de estatísticas (Consultas)', () => {
 
   it('deve carregar estatísticas por code com sucesso', async () => {
     // Arrange
-    const dto = { code: 'abc', originalUrl: 'https://site.com', hits: 10 };
+    const dto = {
+      code: 'abc',
+      originalUrl: 'https://site.com',
+      totalHits: 100,
+      last7DaysHits: 0,
+      daily: [
+        { date: '2024-01-01', hits: 4 },
+        { date: '2024-01-02', hits: 6 },
+        { date: '2024-01-03', hits: 0 },
+      ],
+    };
     const http = makeHttpStub(dto);
     TestBed.configureTestingModule({
       providers: [
@@ -40,7 +50,7 @@ describe('Integração: fluxo de estatísticas (Consultas)', () => {
     const stats = facade.stats();
     expect(stats).not.toBeNull();
     expect(stats!.code).toBe('abc');
-    expect(stats!.hits).toBe(10);
+    expect(stats!.last7DaysHits).toBe(10);
     expect(facade.statsError()).toBeNull();
     expect(facade.statsLoading()).toBe(false);
   });
