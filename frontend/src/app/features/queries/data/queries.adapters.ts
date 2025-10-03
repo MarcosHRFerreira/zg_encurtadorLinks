@@ -4,7 +4,7 @@ import { firstValueFrom } from 'rxjs';
 import type { components } from 'app/core/api/types';
 
 export type StatsDTO = components['schemas']['StatsResponse'];
-export type RankingItemDTO = components['schemas']['RankingItem'];
+export type RankingItemDTO = components['schemas']['RankingItem'] & { originalUrl?: string };
 
 // Tipagem de paginação compatível com Spring Data
 export type Page<T> = Readonly<{
@@ -29,7 +29,7 @@ export type StatsPageDomain = Page<StatsDomain>;
 
 export type RankingDomainItem = Readonly<{
   code: string;
-  hits: number;
+  originalUrl: string;
 }>;
 
 export type DayHitsDomain = Readonly<{
@@ -139,10 +139,10 @@ export class RankingAdapter {
 
   private readonly toDomain = (dto: RankingItemDTO): RankingDomainItem => {
     const code = dto.code;
-    const hits = dto.hits;
-    if (typeof code !== 'string' || typeof hits !== 'number') {
+    const originalUrl = typeof dto.originalUrl === 'string' ? dto.originalUrl : '';
+    if (typeof code !== 'string') {
       throw new Error('Resposta inválida do servidor');
     }
-    return { code, hits } as const;
+    return { code, originalUrl } as const;
   };
 }

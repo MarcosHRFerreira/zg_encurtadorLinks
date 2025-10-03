@@ -7,6 +7,7 @@ import br.corp.shortener.repositories.ShortUrlRepository;
 import jakarta.annotation.PostConstruct;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Component;
 
 import java.util.ArrayList;
@@ -39,28 +40,40 @@ public class TopRankingCache {
 
     @PostConstruct
     public void preload() {
+        reloadFromDatabase();
+    }
+
+    @Scheduled(fixedRateString = "${ranking.refresh.fixed-rate:60000}")
+    public void scheduledRefresh() {
+        reloadFromDatabase();
+    }
+
+    private void reloadFromDatabase() {
         try {
-            log.info("Preloading top-{} ranking cache", TOP_LIMIT);
+            log.info("Refreshing top-{} ranking cache from database", TOP_LIMIT);
             List<RankingItem> all = shortUrlRepository.findRanking();
-            List<RankingItem> topN = all.stream().sorted(Comparator.comparingLong(r -> -r.hits())).limit(TOP_LIMIT).collect(Collectors.toList());
+            List<RankingItem> topN = all.stream()
+                    .sorted(Comparator.comparingLong(r -> -r.hits()))
+                    .limit(TOP_LIMIT)
+                    .collect(Collectors.toList());
             hitsByCode.clear();
             entityByCode.clear();
             for (RankingItem item : topN) {
-                hitsByCode.put(item.code(), item.hits());
                 try {
                     ShortUrl su = shortUrlRepository.findByCode(item.code()).orElse(null);
                     if (su != null) {
+                        hitsByCode.put(item.code(), item.hits());
                         entityByCode.put(item.code(), su);
                     } else {
-                        log.debug("Top preload: entity not found for code {}", item.code());
+                        log.debug("Top refresh: skipping code {} due to missing entity", item.code());
                     }
                 } catch (Exception e) {
-                    log.debug("Failed to load entity for code {} during preload: {}", item.code(), e.getMessage());
+                    log.debug("Failed to load entity for code {} during refresh: {}", item.code(), e.getMessage());
                 }
             }
-            log.info("Top-{} cache loaded: {}", TOP_LIMIT, hitsByCode.keySet());
+            log.info("Top-{} cache refreshed: {}", TOP_LIMIT, hitsByCode.keySet());
         } catch (Exception e) {
-            log.warn("Failed to preload ranking cache: {}", e.getMessage(), e);
+            log.warn("Failed to refresh ranking cache: {}", e.getMessage(), e);
             hitsByCode.clear();
             entityByCode.clear();
         }
@@ -70,7 +83,11 @@ public class TopRankingCache {
         // Retorna em ordem decrescente de hits
         return hitsByCode.entrySet().stream()
                 .sorted(Map.Entry.<String, Long>comparingByValue(Comparator.reverseOrder()))
-                .map(e -> new RankingItem(e.getKey(), e.getValue()))
+                .map(e -> {
+                    ShortUrl su = entityByCode.get(e.getKey());
+                    String originalUrl = su != null ? su.getOriginalUrl() : null;
+                    return new RankingItem(e.getKey(), originalUrl, e.getValue());
+                })
                 .collect(Collectors.toCollection(ArrayList::new));
     }
 

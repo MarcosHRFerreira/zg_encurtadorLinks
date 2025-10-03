@@ -73,7 +73,7 @@ import { QueriesFacade } from '../state/queries.facade';
                         <th>#</th>
                         <th>Código</th>
                         <th>URL curta</th>
-                        <th class="numeric">Acessos</th>
+                        <th>Original</th>
                       </tr>
                     </thead>
                     <tbody>
@@ -81,7 +81,7 @@ import { QueriesFacade } from '../state/queries.facade';
                         <td>{{ i + 1 }}</td>
                         <td class="code">{{ item.code }}</td>
                         <td class="truncate"><a [href]="backendOrigin + '/' + item.code" target="_blank" rel="noopener">{{ backendOrigin + '/' + item.code }}</a></td>
-                        <td class="numeric">{{ item.hits }}</td>
+                        <td class="truncate"><a [href]="item.originalUrl" target="_blank" rel="noopener">{{ item.originalUrl }}</a></td>
                       </tr>
                     </tbody>
                   </table>
@@ -95,19 +95,17 @@ import { QueriesFacade } from '../state/queries.facade';
         </article>
 
         <article class="card">
-          <div class="row">
-            <h3>Estatísticas gerais</h3>
-            <div class="controls">
-              <label>
-                Tamanho da página
-                <select [value]="facade.statsPageSize()" (change)="onPageSizeChange($event)">
-                  <option *ngFor="let opt of pageSizeOptions" [value]="opt">{{ opt }}</option>
-                </select>
-              </label>
-              <div class="pager">
-                <button class="btn ghost" (click)="prevPage()" [disabled]="facade.statsPageLoading() || facade.statsPage()?.first">Anterior</button>
-                <button class="btn ghost" (click)="nextPage()" [disabled]="facade.statsPageLoading() || facade.statsPage()?.last">Próxima</button>
-              </div>
+          <h3 class="title-nowrap">Estatísticas Gerais</h3>
+          <div class="controls">
+            <label>
+              Tamanho da página
+              <select [value]="facade.statsPageSize()" (change)="onPageSizeChange($event)">
+                <option *ngFor="let opt of pageSizeOptions" [value]="opt">{{ opt }}</option>
+              </select>
+            </label>
+            <div class="pager">
+              <button class="btn ghost" (click)="prevPage()" [disabled]="facade.statsPageLoading() || facade.statsPage()?.first">Anterior</button>
+              <button class="btn ghost" (click)="nextPage()" [disabled]="facade.statsPageLoading() || facade.statsPage()?.last">Próxima</button>
             </div>
           </div>
 
@@ -120,13 +118,15 @@ import { QueriesFacade } from '../state/queries.facade';
                 <table class="table">
                   <thead>
                     <tr>
+                      <th>#</th>
                       <th>Código</th>
                       <th>Original</th>
                       <th class="numeric">Acessos</th>
                     </tr>
                   </thead>
                   <tbody>
-                    <tr *ngFor="let s of page.content; trackBy: trackByCode">
+                    <tr *ngFor="let s of page.content; let i = index; trackBy: trackByCode">
+                      <td>{{ i + 1 }}</td>
                       <td>{{ s.code }}</td>
                       <td class="truncate"><a [href]="s.originalUrl" target="_blank" rel="noopener">{{ s.originalUrl }}</a></td>
                       <td class="numeric">{{ s.hits }}</td>
@@ -134,6 +134,7 @@ import { QueriesFacade } from '../state/queries.facade';
                   </tbody>
                 </table>
                 <p class="muted">Página {{ page.number + 1 }} de {{ page.totalPages }} — {{ page.totalElements }} registro(s)</p>
+                <p class="muted">As informações exibidas referem-se às últimas inseridas na base.</p>
               </ng-container>
             </ng-container>
             <ng-template #emptyStats>
@@ -171,7 +172,8 @@ import { QueriesFacade } from '../state/queries.facade';
     `.kpis{display:flex;gap:16px;margin:8px 0}`,
     `.kpi{background:#f6f8fa;border:1px solid #e5e7eb;border-radius:6px;padding:8px 12px}`,
     `.kpi .label{display:block;color:#6b7280;font-size:12px}`,
-    `.kpi .value{display:block;font-size:18px;font-weight:600}`
+    `.kpi .value{display:block;font-size:18px;font-weight:600}`,
+    `.title-nowrap{white-space:nowrap}`
   ],
   changeDetection: ChangeDetectionStrategy.OnPush
 })
@@ -196,17 +198,28 @@ export default class QueriesPageComponent implements OnInit, OnDestroy {
 
   readonly pageSizeOptions = [10, 20, 30, 40, 50] as const;
 
+  private rankingIntervalId: any | number | undefined;
+
   ngOnInit(): void {
     // Limpa estado da estatística por código ao entrar na tela
     this.facade.resetStats();
     this.statsForm.reset({ code: '' });
     void this.facade.fetchRanking();
     void this.facade.fetchStatsPage();
+
+    // Auto-recarrega ranking a cada 1 minuto
+    this.rankingIntervalId = setInterval(() => {
+      void this.facade.fetchRanking();
+    }, 60_000);
   }
 
   ngOnDestroy(): void {
     // Garante limpeza ao sair da tela (troca de rota)
     this.facade.resetStats();
+    if (this.rankingIntervalId) {
+      clearInterval(this.rankingIntervalId as number);
+      this.rankingIntervalId = undefined;
+    }
   }
 
   async onStatsSubmit(): Promise<void> {

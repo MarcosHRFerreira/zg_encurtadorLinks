@@ -70,8 +70,14 @@ public class UrlShortenerService {
         for (int attempt = 0; attempt < maxAttempts; attempt++) {
             final String code = generateRandomCode();
             log.debug("Attempt {} generating random code: {}", attempt + 1, code);
+            // Primeiro valida no cache
             if (topRankingCache.containsCode(code)) {
                 log.debug("Generated code {} is present in cache; retrying", code);
+                continue;
+            }
+            // Se não estiver no cache, valida existência no banco
+            if (shortUrlRepository.existsByCode(code)) {
+                log.debug("Generated code {} already exists in database; retrying", code);
                 continue;
             }
             final ShortUrl candidate = new ShortUrl(originalUrl, code, Instant.now());
@@ -127,12 +133,8 @@ public class UrlShortenerService {
     }
 
     public List<RankingItem> ranking() {
-        log.info("Fetching ranking list (top-100 from cache)");
-        List<RankingItem> top = topRankingCache.getTop();
-        if (top.isEmpty()) {
-            return shortUrlRepository.findRanking().stream().limit(100).toList();
-        }
-        return top;
+        log.info("Fetching ranking list exclusively from cache (top-100)");
+        return topRankingCache.getTop();
     }
 
     public Page<StatsResponse> listStats(Pageable pageable) {

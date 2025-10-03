@@ -22,7 +22,7 @@ public interface ShortUrlRepository extends JpaRepository<ShortUrl, Long> {
     @Query("SELECT su FROM ShortUrl su WHERE su.originalUrl = :originalUrl")
     List<ShortUrl> findAllByOriginalUrl(@Param("originalUrl") String originalUrl);
 
-    @Query("SELECT new br.corp.shortener.dto.RankingItem(su.code, COUNT(a)) FROM ShortUrlAccess a JOIN a.shortUrl su GROUP BY su ORDER BY COUNT(a) DESC")
+    @Query("SELECT new br.corp.shortener.dto.RankingItem(su.code, su.originalUrl, COUNT(a)) FROM ShortUrlAccess a JOIN a.shortUrl su GROUP BY su ORDER BY COUNT(a) DESC")
     List<RankingItem> findRanking();
 
     @Query(value = "SELECT new br.corp.shortener.dto.StatsResponse(su.code, su.originalUrl, COUNT(a)) FROM ShortUrl su LEFT JOIN ShortUrlAccess a ON a.shortUrl = su GROUP BY su.id, su.code, su.originalUrl ORDER BY su.createdAt DESC", countQuery = "SELECT COUNT(su) FROM ShortUrl su")

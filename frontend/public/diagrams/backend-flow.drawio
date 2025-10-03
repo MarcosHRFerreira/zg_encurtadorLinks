@@ -1,0 +1,117 @@
+<mxfile host="app.diagrams.net" agent="Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/141.0.0.0 Safari/537.36" version="28.2.5">
+  <diagram id="backend-flow" name="Backend Flow">
+    <mxGraphModel dx="1959" dy="874" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="1920" pageHeight="1080" math="0" shadow="0">
+      <root>
+        <mxCell id="0" />
+        <mxCell id="1" parent="0" />
+        <mxCell id="linkCtrl" value="LinkController\nPOST /shorten" style="shape=rectangle;rounded=1;fillColor=#fff;strokeColor=#000;fontSize=12" parent="1" vertex="1">
+          <mxGeometry x="320" y="960" width="220" height="70" as="geometry" />
+        </mxCell>
+        <mxCell id="statsCtrl" value="StatsController\nGET /&#xa;ranking\nGET /stats/{code}" style="shape=rectangle;rounded=1;fillColor=#fff;strokeColor=#000;fontSize=12" parent="1" vertex="1">
+          <mxGeometry x="320" y="140" width="220" height="90" as="geometry" />
+        </mxCell>
+        <mxCell id="redirectCtrl" value="Redirect Controller\nGET /{code}" style="shape=rectangle;rounded=1;fillColor=#fff;strokeColor=#000;fontSize=12" parent="1" vertex="1">
+          <mxGeometry x="310" y="290" width="220" height="70" as="geometry" />
+        </mxCell>
+        <mxCell id="service" value="UrlShortenerService" style="shape=rectangle;rounded=1;fillColor=#fff2cc;strokeColor=#d6b656;fontSize=12" parent="1" vertex="1">
+          <mxGeometry x="20" y="380" width="240" height="50" as="geometry" />
+        </mxCell>
+        <mxCell id="shorten" value="shorten(url, customCode)\nCustom: &#xa;valida DB+Cache → save\nRandom: &#xa;até 5 tentativas\n1) cache.&#xa;contains(code)\n2) repo.existsByCode(code)\n3) &#xa;saveAndFlush\ncatch DataIntegrityViolation → retry" style="shape=rectangle;rounded=1;fillColor=#ffffff;strokeColor=#000000;fontSize=12" parent="1" vertex="1">
+          <mxGeometry x="920" y="340" width="380" height="150" as="geometry" />
+        </mxCell>
+        <mxCell id="getByCode" value="getByCode(code)\n1) &#xa;topRankingCache.getEntity\n2) repo.findByCode" style="shape=rectangle;rounded=1;fillColor=#ffffff;strokeColor=#000000;fontSize=12" parent="1" vertex="1">
+          <mxGeometry x="320" y="610" width="300" height="90" as="geometry" />
+        </mxCell>
+        <mxCell id="registerAccess" value="registerAccess(shortUrl, ua, referer)\n→ save&#xa; ShortUrlAccess\nSe transação ativa: afterCommit →&#xa; topRankingCache.onAccess(shortUrl)\nSenão: &#xa;atualiza cache imediatamente" style="shape=rectangle;rounded=1;fillColor=#ffffff;strokeColor=#000000;fontSize=12" parent="1" vertex="1">
+          <mxGeometry x="310" y="780" width="420" height="120" as="geometry" />
+        </mxCell>
+        <mxCell id="listStats" value="listStats(Pageable)\n→ &#xa;ShortUrlRepository.findAllStats(Page)" style="shape=rectangle;rounded=1;fillColor=#ffffff;strokeColor=#000000;fontSize=12" parent="1" vertex="1">
+          <mxGeometry x="320" y="1120" width="320" height="70" as="geometry" />
+        </mxCell>
+        <mxCell id="cache" value="TopRankingCache\nTop-100&#xa; + Hits (code→count)\ncontainsCode,&#xa; getEntity, getHits, refreshTop100, onAccess" style="shape=rectangle;rounded=1;fillColor=#e1d5e7;strokeColor=#9673a6;fontSize=12" parent="1" vertex="1">
+          <mxGeometry x="800" y="125" width="320" height="120" as="geometry" />
+        </mxCell>
+        <mxCell id="scheduler" value="@EnableScheduling\&#xa;n@Scheduled(1 min) → refreshTop100" style="shape=rectangle;rounded=1;fillColor=#e1d5e7;strokeColor=#9673a6;fontSize=12" parent="1" vertex="1">
+          <mxGeometry x="1280" y="140" width="260" height="70" as="geometry" />
+        </mxCell>
+        <mxCell id="db" value="Database (PostgreSQL)\nshort_urls&#xa; (unique code)\nshort_url_accesses" style="shape=rectangle;rounded=1;fillColor=#f8cecc;strokeColor=#b85450;fontSize=12" parent="1" vertex="1">
+          <mxGeometry x="950" y="650" width="320" height="100" as="geometry" />
+        </mxCell>
+        <mxCell id="e1" style="endArrow=classic;strokeColor=#000" parent="1" source="linkCtrl" target="service" edge="1">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points">
+              <mxPoint x="150" y="865" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="e2" style="endArrow=classic;strokeColor=#000" parent="1" source="service" target="shorten" edge="1">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="e3" value="Verifica cache" style="endArrow=classic;strokeColor=#9673a6;fontSize=11" parent="1" source="shorten" target="cache" edge="1">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="e4" value="existsByCode / saveAndFlush" style="endArrow=classic;strokeColor=#b85450;fontSize=11" parent="1" source="shorten" target="db" edge="1">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="e5" value="/ranking → getTop" style="endArrow=classic;strokeColor=#9673a6;fontSize=11" parent="1" source="statsCtrl" target="cache" edge="1">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="e6" value="/stats/{code}" style="endArrow=classic;strokeColor=#000;fontSize=11" parent="1" source="statsCtrl" target="service" edge="1">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points">
+              <mxPoint x="140" y="185" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="e7" style="endArrow=classic;strokeColor=#000" parent="1" source="service" target="getByCode" edge="1">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points">
+              <mxPoint x="300" y="660" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="e8" value="Tentativa 1" style="endArrow=classic;strokeColor=#9673a6;fontSize=11" parent="1" source="getByCode" target="cache" edge="1">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="e9" value="Fallback findByCode" style="endArrow=classic;strokeColor=#b85450;fontSize=11" parent="1" source="getByCode" target="db" edge="1">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="e10" value="resolve code" style="endArrow=classic;strokeColor=#000;fontSize=11;entryX=0.75;entryY=0;entryDx=0;entryDy=0;" parent="1" source="redirectCtrl" target="service" edge="1">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points">
+              <mxPoint x="200" y="325" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="e11" value="registerAccess" style="endArrow=classic;strokeColor=#000;fontSize=11" parent="1" source="service" target="registerAccess" edge="1">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points">
+              <mxPoint x="250" y="700" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="e12" value="INSERT short_url_accesses" style="endArrow=classic;strokeColor=#b85450;fontSize=11" parent="1" source="registerAccess" target="db" edge="1">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="e13" value="afterCommit → onAccess" style="endArrow=classic;strokeColor=#9673a6;fontSize=11" parent="1" source="registerAccess" target="cache" edge="1">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="e14" value="Refresh Top-100 periódico" style="endArrow=classic;strokeColor=#9673a6;fontSize=11" parent="1" source="scheduler" target="cache" edge="1">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="e15" value="listStats(Pageable)" style="endArrow=classic;strokeColor=#000;fontSize=11;entryX=0;entryY=0.5;entryDx=0;entryDy=0;" parent="1" target="listStats" edge="1">
+          <mxGeometry relative="1" as="geometry">
+            <mxPoint x="110" y="429.9999999999998" as="sourcePoint" />
+            <mxPoint x="290" y="1007.3529411764705" as="targetPoint" />
+            <Array as="points">
+              <mxPoint x="110" y="1010" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="e16" value="findAllStats (countQuery)" style="endArrow=classic;strokeColor=#b85450;fontSize=11" parent="1" source="listStats" target="db" edge="1">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+      </root>
+    </mxGraphModel>
+  </diagram>
+</mxfile>
