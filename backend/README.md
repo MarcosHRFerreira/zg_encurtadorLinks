@@ -135,6 +135,28 @@ curl -i http://localhost:8080/stats/ABCDE
 curl -i http://localhost:8080/ranking
 ```
 
+### Comportamento do cache de ranking
+- O ranking é servido exclusivamente a partir de um cache em memória (`TopRankingCache`).
+- Pré-carregamento: o cache é populado no startup (`@PostConstruct`) com os Top-100 do banco.
+- Atualização incremental: cada redirecionamento (`/{code}`) chama `onAccess(...)` para refletir novos acessos.
+- Recarga lazy: se o cache estiver vazio ao chamar `GET /ranking`, o serviço tenta recarregar do banco.
+- Cooldown mínimo: para evitar recargas repetidas em ambientes ociosos, há um cooldown configurável antes de uma nova recarga lazy.
+
+Configuração do cooldown
+- Propriedade: `ranking.refresh.cooldown-ms` (padrão: `60000` ms)
+- Defina no `application.yaml` ou via variável de ambiente.
+- Exemplos:
+  - YAML:
+    ```yaml
+    ranking:
+      refresh:
+        cooldown-ms: 30000
+    ```
+  - Ambiente:
+    ```bash
+    RANKING_REFRESH_COOLDOWN_MS=30000
+    ```
+
 ## Modelos de erro
 - `ErrorResponse`: `{ "error": "...", "message": "..." }`
 - `ValidationErrorResponse`: `{ "error": "Erro de validação", "details": { "campo": "mensagem" } }`
