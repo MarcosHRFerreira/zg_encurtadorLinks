@@ -76,6 +76,11 @@ public class TopRankingCache {
     }
 
     public List<RankingItem> getTop() {
+        // Recarga lazy: se o cache estiver vazio, tenta recarregar do banco
+        if (hitsByCode.isEmpty()) {
+            log.info("Top ranking cache empty; lazily reloading from database");
+            reloadFromDatabase();
+        }
         // Retorna em ordem decrescente de hits
         return hitsByCode.entrySet().stream()
                 .sorted(Map.Entry.<String, Long>comparingByValue(Comparator.reverseOrder()))
