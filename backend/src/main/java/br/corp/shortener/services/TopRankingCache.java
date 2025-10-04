@@ -7,8 +7,11 @@ import br.corp.shortener.repositories.ShortUrlRepository;
 import jakarta.annotation.PostConstruct;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
 
+import java.time.Duration;
+import java.time.Instant;
 import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.LinkedHashMap;
@@ -31,6 +34,11 @@ public class TopRankingCache {
     private final Map<String, ShortUrl> entityByCode = new LinkedHashMap<>();
 
     private static final int TOP_LIMIT = 100;
+
+    @Value("${ranking.refresh.cooldown-ms:60000}")
+    private long cooldownMs;
+
+    private volatile Instant lastReloadAt;
 
     public TopRankingCache(ShortUrlRepository shortUrlRepository, ShortUrlAccessRepository accessRepository) {
         this.shortUrlRepository = shortUrlRepository;
@@ -67,19 +75,32 @@ public class TopRankingCache {
                     log.debug("Failed to load entity for code {} during refresh: {}", item.code(), e.getMessage());
                 }
             }
+            lastReloadAt = Instant.now();
             log.info("Top-{} cache refreshed: {}", TOP_LIMIT, hitsByCode.keySet());
         } catch (Exception e) {
             log.warn("Failed to refresh ranking cache: {}", e.getMessage(), e);
             hitsByCode.clear();
             entityByCode.clear();
+            lastReloadAt = Instant.now();
         }
     }
 
     public List<RankingItem> getTop() {
         // Recarga lazy: se o cache estiver vazio, tenta recarregar do banco
         if (hitsByCode.isEmpty()) {
-            log.info("Top ranking cache empty; lazily reloading from database");
-            reloadFromDatabase();
+            Instant now = Instant.now();
+            boolean canReload = (lastReloadAt == null) || Duration.between(lastReloadAt, now).toMillis() >= cooldownMs;
+            if (canReload) {
+                log.info("Top ranking cache empty; lazily reloading from database (cooldown={}ms)", cooldownMs);
+                synchronized (this) {
+                    // Revalida condição após adquirir lock
+                    if (hitsByCode.isEmpty()) {
+                        reloadFromDatabase();
+                    }
+                }
+            } else {
+                log.debug("Top ranking cache empty; skipping reload due to cooldown ({}ms)", cooldownMs);
+            }
         }
         // Retorna em ordem decrescente de hits
         return hitsByCode.entrySet().stream()
