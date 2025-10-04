@@ -7,7 +7,6 @@ import br.corp.shortener.repositories.ShortUrlRepository;
 import jakarta.annotation.PostConstruct;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Component;
 
 import java.util.ArrayList;
@@ -43,10 +42,7 @@ public class TopRankingCache {
         reloadFromDatabase();
     }
 
-    @Scheduled(fixedRateString = "${ranking.refresh.fixed-rate:60000}")
-    public void scheduledRefresh() {
-        reloadFromDatabase();
-    }
+    // Refresh agendado removido: o cache é pré-carregado no startup
 
     private void reloadFromDatabase() {
         try {
