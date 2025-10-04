@@ -40,3 +40,8 @@ management:
       probes:
         enabled: true
       show-details: never
+
+# Configuração do cache de ranking (cooldown para recarga lazy)
+ranking:
+  refresh:
+    cooldown-ms: 60000
