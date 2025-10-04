@@ -2,10 +2,7 @@ package br.corp.shortener.controllers;
 
 import br.corp.shortener.dto.ErrorResponse;
 import br.corp.shortener.dto.StatsResponse;
-import br.corp.shortener.entities.ShortUrl;
-import br.corp.shortener.repositories.ShortUrlAccessRepository;
 import br.corp.shortener.services.UrlShortenerService;
-import br.corp.shortener.services.TopRankingCache;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -26,28 +23,13 @@ class StatsControllerTest {
     @Mock
     private UrlShortenerService service;
 
-    @Mock
-    private ShortUrlAccessRepository accessRepository;
-
-    @Mock
-    private TopRankingCache topRankingCache;
-
     @InjectMocks
     private StatsController controller;
 
-    private static ShortUrl su(String url, String code) {
-        ShortUrl su = new ShortUrl(url, code, Instant.now());
-        su.setId(7L);
-        return su;
-    }
-
     @Test
-    @DisplayName("stats 200 retorna body com hits do repositório")
+    @DisplayName("stats 200 retorna body do service")
     void stats_ok() {
-        ShortUrl shortUrl = su("https://ex.com", "ABCDE");
-        when(service.getByCode("ABCDE")).thenReturn(shortUrl);
-        when(topRankingCache.getHits("ABCDE")).thenReturn(null);
-        when(accessRepository.countByShortUrl(any(ShortUrl.class))).thenReturn(10L);
+        when(service.getStats("ABCDE")).thenReturn(new StatsResponse("ABCDE", "https://ex.com", 10L));
 
         ResponseEntity<?> resp = controller.stats("ABCDE");
         assertEquals(HttpStatus.OK, resp.getStatusCode());
@@ -61,7 +43,7 @@ class StatsControllerTest {
     @Test
     @DisplayName("stats 404 quando code não existe")
     void stats_notFound() {
-        when(service.getByCode("XXXXX")).thenReturn(null);
+        when(service.getStats("XXXXX")).thenReturn(null);
         ResponseEntity<?> resp = controller.stats("XXXXX");
         assertEquals(HttpStatus.NOT_FOUND, resp.getStatusCode());
         assertTrue(resp.getBody() instanceof ErrorResponse);

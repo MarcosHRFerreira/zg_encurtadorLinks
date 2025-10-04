@@ -2,6 +2,8 @@ package br.corp.shortener.services;
 
 import br.corp.shortener.dto.RankingItem;
 import br.corp.shortener.dto.StatsResponse;
+import br.corp.shortener.dto.StatsSummaryResponse;
+import br.corp.shortener.dto.StatsCodeSummaryResponse;
 import br.corp.shortener.entities.ShortUrl;
 import br.corp.shortener.entities.ShortUrlAccess;
 import br.corp.shortener.exceptions.DuplicateCodeException;
@@ -15,6 +17,9 @@ import org.springframework.transaction.support.TransactionSynchronizationManager
 
 import java.security.SecureRandom;
 import java.time.Instant;
+import java.time.LocalDate;
+import java.time.ZoneId;
+import java.time.ZoneOffset;
 import java.util.List;
 import java.util.Random;
 
@@ -140,6 +145,79 @@ public class UrlShortenerService {
     public Page<StatsResponse> listStats(Pageable pageable) {
         log.info("Listing stats page: page={}, size={}", pageable.getPageNumber(), pageable.getPageSize());
         return shortUrlRepository.findAllStats(pageable);
+    }
+
+    /**
+     * Calcula estatísticas agregadas globais (total, últimos 7 dias e diário).
+     */
+    public StatsSummaryResponse getStatsSummary() {
+        log.info("Computing global stats summary");
+        long total = shortUrlAccessRepository.count();
+
+        Instant now = Instant.now();
+        Instant cutoff = now.minusSeconds(7 * 24 * 60 * 60);
+        long last7 = shortUrlAccessRepository.countByAccessedAtAfter(cutoff);
+
+        ZoneId zone = ZoneOffset.UTC;
+        LocalDate today = LocalDate.now(zone);
+        List<br.corp.shortener.dto.DayHits> daily = new java.util.ArrayList<>();
+
+        for (int i = 6; i >= 0; i--) {
+            LocalDate day = today.minusDays(i);
+            Instant start = day.atStartOfDay(zone).toInstant();
+            Instant end = day.plusDays(1).atStartOfDay(zone).toInstant();
+            long hits = shortUrlAccessRepository.countByAccessedAtBetween(start, end);
+            if (hits > 0) {
+                daily.add(new br.corp.shortener.dto.DayHits(day, hits));
+            }
+        }
+
+        return new StatsSummaryResponse(total, last7, daily);
+    }
+
+    /**
+     * Calcula estatísticas para um código específico.
+     * Retorna null se o código não existir.
+     */
+    public StatsResponse getStats(String code) {
+        ShortUrl su = getByCode(code);
+        if (su == null) return null;
+
+        Long cachedHits = topRankingCache.getHits(su.getCode());
+        long hits = cachedHits != null ? cachedHits : shortUrlAccessRepository.countByShortUrl(su);
+        return new StatsResponse(su.getCode(), su.getOriginalUrl(), hits);
+    }
+
+    /**
+     * Calcula resumo de estatísticas para um código específico.
+     * Retorna null se o código não existir.
+     */
+    public StatsCodeSummaryResponse getStatsSummaryByCode(String code) {
+        ShortUrl su = getByCode(code);
+        if (su == null) return null;
+
+        Instant now = Instant.now();
+        Instant cutoff = now.minusSeconds(7 * 24 * 60 * 60);
+
+        Long cachedHits = topRankingCache.getHits(su.getCode());
+        long totalHits = cachedHits != null ? cachedHits : shortUrlAccessRepository.countByShortUrl(su);
+        long last7DaysHits = shortUrlAccessRepository.countByShortUrlAndAccessedAtAfter(su, cutoff);
+
+        ZoneId zone = ZoneOffset.UTC;
+        LocalDate today = LocalDate.now(zone);
+        List<br.corp.shortener.dto.DayHits> daily = new java.util.ArrayList<>();
+
+        for (int i = 6; i >= 0; i--) {
+            LocalDate day = today.minusDays(i);
+            Instant start = day.atStartOfDay(zone).toInstant();
+            Instant end = day.plusDays(1).atStartOfDay(zone).toInstant();
+            long hits = shortUrlAccessRepository.countByShortUrlAndAccessedAtBetween(su, start, end);
+            if (hits > 0) {
+                daily.add(new br.corp.shortener.dto.DayHits(day, hits));
+            }
+        }
+
+        return new StatsCodeSummaryResponse(su.getCode(), su.getOriginalUrl(), totalHits, last7DaysHits, daily);
     }
 
     private String generateRandomCode() {

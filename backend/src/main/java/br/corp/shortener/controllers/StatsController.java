@@ -1,14 +1,10 @@
 package br.corp.shortener.controllers;
 
 import br.corp.shortener.dto.ErrorResponse;
-import br.corp.shortener.dto.DayHits;
 import br.corp.shortener.dto.StatsResponse;
 import br.corp.shortener.dto.StatsSummaryResponse;
 import br.corp.shortener.dto.StatsCodeSummaryResponse;
-import br.corp.shortener.entities.ShortUrl;
-import br.corp.shortener.repositories.ShortUrlAccessRepository;
 import br.corp.shortener.services.UrlShortenerService;
-import br.corp.shortener.services.TopRankingCache;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -26,23 +22,16 @@ import org.slf4j.LoggerFactory;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import java.time.*;
-import java.time.temporal.ChronoUnit;
-import java.util.ArrayList;
-import java.util.List;
 
 @RestController
 @Tag(name = "Estatísticas", description = "Endpoints para consulta de estatísticas")
 public class StatsController {
 
     private final UrlShortenerService service;
-    private final ShortUrlAccessRepository accessRepository;
-    private final TopRankingCache topRankingCache;
     private static final Logger log = LoggerFactory.getLogger(StatsController.class);
 
-    public StatsController(UrlShortenerService service, ShortUrlAccessRepository accessRepository, TopRankingCache topRankingCache) {
+    public StatsController(UrlShortenerService service) {
         this.service = service;
-        this.accessRepository = accessRepository;
-        this.topRankingCache = topRankingCache;
     }
 
     @GetMapping("/stats/{code:[A-Za-z0-9]{5}}")
@@ -54,16 +43,13 @@ public class StatsController {
     })
     public ResponseEntity<?> stats(@PathVariable("code") String code) {
         log.info("Stats requested for code={}", code);
-        ShortUrl su = service.getByCode(code);
-        if (su == null) {
+        StatsResponse resp = service.getStats(code);
+        if (resp == null) {
             log.warn("Stats not found for code={}", code);
             ErrorResponse errorResponse = new ErrorResponse("URL não encontrada", "O código informado não existe");
             return ResponseEntity.status(HttpStatus.NOT_FOUND).body(errorResponse);
         }
-        Long cachedHits = topRankingCache.getHits(su.getCode());
-        long hits = cachedHits != null ? cachedHits : accessRepository.countByShortUrl(su);
-        log.info("Stats found: code={}, hits={}", su.getCode(), hits);
-        StatsResponse resp = new StatsResponse(su.getCode(), su.getOriginalUrl(), hits);
+        log.info("Stats found: code={}, hits={}", resp.code(), resp.hits());
         return ResponseEntity.ok(resp);
     }
 
@@ -87,28 +73,7 @@ public class StatsController {
     })
     public ResponseEntity<StatsSummaryResponse> summary() {
         log.info("Stats summary requested");
-        long total = accessRepository.count();
-
-        Instant now = Instant.now();
-        Instant cutoff = now.minus(7, ChronoUnit.DAYS);
-        long last7 = accessRepository.countByAccessedAtAfter(cutoff);
-
-        ZoneId zone = ZoneOffset.UTC;
-        LocalDate today = LocalDate.now(zone);
-        List<DayHits> daily = new ArrayList<>();
-
-        // Últimos 7 dias em ordem cronológica (antigo -> recente)
-        for (int i = 6; i >= 0; i--) {
-            LocalDate day = today.minusDays(i);
-            Instant start = day.atStartOfDay(zone).toInstant();
-            Instant end = day.plusDays(1).atStartOfDay(zone).toInstant();
-            long hits = accessRepository.countByAccessedAtBetween(start, end);
-            if (hits > 0) {
-                daily.add(new DayHits(day, hits));
-            }
-        }
-
-        StatsSummaryResponse resp = new StatsSummaryResponse(total, last7, daily);
+        StatsSummaryResponse resp = service.getStatsSummary();
         return ResponseEntity.ok(resp);
     }
 
@@ -121,36 +86,12 @@ public class StatsController {
     })
     public ResponseEntity<?> summaryByCode(@PathVariable("code") String code) {
         log.info("Stats code summary requested for code={}", code);
-        ShortUrl su = service.getByCode(code);
-        if (su == null) {
+        StatsCodeSummaryResponse resp = service.getStatsSummaryByCode(code);
+        if (resp == null) {
             log.warn("Stats not found for code={}", code);
             ErrorResponse errorResponse = new ErrorResponse("URL não encontrada", "O código informado não existe");
             return ResponseEntity.status(HttpStatus.NOT_FOUND).body(errorResponse);
         }
-
-        Instant now = Instant.now();
-        Instant cutoff = now.minus(7, ChronoUnit.DAYS);
-
-        Long cachedHits = topRankingCache.getHits(su.getCode());
-        long totalHits = cachedHits != null ? cachedHits : accessRepository.countByShortUrl(su);
-        long last7DaysHits = accessRepository.countByShortUrlAndAccessedAtAfter(su, cutoff);
-
-        ZoneId zone = ZoneOffset.UTC;
-        LocalDate today = LocalDate.now(zone);
-        List<DayHits> daily = new ArrayList<>();
-
-        // Últimos 7 dias em ordem cronológica (antigo -> recente)
-        for (int i = 6; i >= 0; i--) {
-            LocalDate day = today.minusDays(i);
-            Instant start = day.atStartOfDay(zone).toInstant();
-            Instant end = day.plusDays(1).atStartOfDay(zone).toInstant();
-            long hits = accessRepository.countByShortUrlAndAccessedAtBetween(su, start, end);
-            if (hits > 0) {
-                daily.add(new DayHits(day, hits));
-            }
-        }
-
-        StatsCodeSummaryResponse resp = new StatsCodeSummaryResponse(su.getCode(), su.getOriginalUrl(), totalHits, last7DaysHits, daily);
         return ResponseEntity.ok(resp);
     }
 }
