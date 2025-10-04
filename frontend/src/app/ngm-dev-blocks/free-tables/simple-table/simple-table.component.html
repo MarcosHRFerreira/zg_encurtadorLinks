@@ -1,0 +1,78 @@
+<!--
+	Installed from https://ui.angular-material.dev/api/registry/
+	Update this file using `@ngm-dev/cli update free-tables/simple-table`
+-->
+
+<div class="w-full md:max-w-7xl mx-auto p-4 md:p-6">
+  <div class="grid gap-4 grid-cols-1 md:grid-cols-2">
+    <div class="flex flex-col gap-2">
+      <h6 class="text-headline-small font-headline-small">Users</h6>
+      <p class="text-body-medium font-body-medium">
+        A list of all the users in your account including their name, title,
+        email and role.
+      </p>
+    </div>
+    <div class="flex md:justify-end">
+      <button matButton="filled">Add user</button>
+    </div>
+  </div>
+  <table mat-table [dataSource]="dataSource" class="mt-6">
+    <!--- Note that these columns can be defined in any order.
+            The actual rendered columns are set as a property on the row definition" -->
+
+    <!-- Name Column -->
+    <ng-container matColumnDef="name">
+      <th mat-header-cell *matHeaderCellDef>Name</th>
+      <td mat-cell *matCellDef="let element" class="font-medium">
+        {{ element.name }}
+      </td>
+    </ng-container>
+
+    <!-- Title Column -->
+    <ng-container matColumnDef="title">
+      <th mat-header-cell *matHeaderCellDef>Title</th>
+      <td
+        mat-cell
+        *matCellDef="let element"
+        class="text-gray-500 dark:text-gray-400"
+      >
+        {{ element.title }}
+      </td>
+    </ng-container>
+
+    <!-- Email Column -->
+    <ng-container matColumnDef="email">
+      <th mat-header-cell *matHeaderCellDef>Email</th>
+      <td
+        mat-cell
+        *matCellDef="let element"
+        class="text-gray-500 dark:text-gray-400"
+      >
+        {{ element.email }}
+      </td>
+    </ng-container>
+
+    <!-- Role Column -->
+    <ng-container matColumnDef="role">
+      <th mat-header-cell *matHeaderCellDef>Role</th>
+      <td
+        mat-cell
+        *matCellDef="let element"
+        class="text-gray-500 dark:text-gray-400"
+      >
+        {{ element.role }}
+      </td>
+    </ng-container>
+
+    <!-- Actions Column -->
+    <ng-container matColumnDef="actions">
+      <th mat-header-cell *matHeaderCellDef></th>
+      <td mat-cell *matCellDef="let element" class="density-3">
+        <button matButton="text">Edit</button>
+      </td>
+    </ng-container>
+
+    <tr mat-header-row *matHeaderRowDef="displayedColumns"></tr>
+    <tr mat-row *matRowDef="let row; columns: displayedColumns"></tr>
+  </table>
+</div>

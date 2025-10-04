@@ -59,7 +59,8 @@
               }
             ],
             "styles": [
-              "src/styles.scss"
+              "src/styles.scss",
+              "src/app/ngm-dev-blocks/styles/ngm-dev-blocks-styles.scss"
             ]
           },
           "configurations": {

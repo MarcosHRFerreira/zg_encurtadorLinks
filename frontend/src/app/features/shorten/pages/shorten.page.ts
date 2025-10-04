@@ -3,25 +3,32 @@ import { CommonModule } from '@angular/common';
 import { formatDateBrLocal } from 'app/core/utils/date-format';
 import { ReactiveFormsModule, FormBuilder, Validators } from '@angular/forms';
 import { ShortenFacade } from '../state/shorten.facade';
+import { MatFormFieldModule } from '@angular/material/form-field';
+import { MatInputModule } from '@angular/material/input';
+import { MatButton } from '@angular/material/button';
 
 @Component({
   selector: 'app-shorten-page',
   standalone: true,
-  imports: [CommonModule, ReactiveFormsModule],
+  imports: [CommonModule, ReactiveFormsModule, MatFormFieldModule, MatInputModule, MatButton],
   template: `
     <section class="container">
       <h2>Encurtar URL</h2>
       <form [formGroup]="form" (submit)="$event.preventDefault()" (ngSubmit)="onSubmit($event)" method="post" novalidate>
-        <label>URL</label>
-        <input class="input" type="url" formControlName="url" placeholder="https://..." required />
+        <mat-form-field appearance="outline" class="w-full">
+          <mat-label>URL</mat-label>
+          <input matInput type="url" formControlName="url" placeholder="https://..." required />
+        </mat-form-field>
         <div class="error" *ngIf="form.controls.url.invalid && form.controls.url.touched">
           Informe uma URL válida
         </div>
 
-        <label>Código (opcional)</label>
-        <input class="input" type="text" formControlName="code" maxlength="5" pattern="^[A-Za-z0-9]{5}$" />
+        <mat-form-field appearance="outline" class="w-full">
+          <mat-label>Código (opcional)</mat-label>
+          <input matInput type="text" formControlName="code" maxlength="5" pattern="^[A-Za-z0-9]{5}$" />
+        </mat-form-field>
 
-        <button class="btn" type="submit" [disabled]="facade.loading() || form.invalid">Encurtar</button>
+        <button [matButton]="'filled'" class="rounded-full" type="submit" [disabled]="facade.loading() || form.invalid">Encurtar</button>
       </form>
 
       <div class="result" *ngIf="facade.result() as r">
@@ -41,7 +48,7 @@ import { ShortenFacade } from '../state/shorten.facade';
   `,
   styles: [
     `.container{max-width:640px;margin:24px auto;padding:16px}`,
-    `.input{width:100%;padding:8px;margin:4px 0}`,
+    `.container h2{font-size:24px;font-weight:700;margin-bottom:16px;border-left:6px solid #3f51b5;padding-left:10px}`,
     `.btn{padding:8px 12px;margin-top:8px}`,
     `.error{color:#c0392b;margin-top:8px}`,
     `.result{background:#f6f8fa;padding:12px;margin-top:12px;border-radius:6px}`

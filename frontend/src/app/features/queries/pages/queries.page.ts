@@ -2,11 +2,15 @@ import { Component, ChangeDetectionStrategy, inject, OnInit, OnDestroy } from '@
 import { CommonModule } from '@angular/common';
 import { ReactiveFormsModule, FormBuilder, Validators } from '@angular/forms';
 import { QueriesFacade } from '../state/queries.facade';
+import { MatButton } from '@angular/material/button';
+import { MatTableModule } from '@angular/material/table';
+import { MatFormFieldModule } from '@angular/material/form-field';
+import { MatInputModule } from '@angular/material/input';
 
 @Component({
   selector: 'app-queries-page',
   standalone: true,
-  imports: [CommonModule, ReactiveFormsModule],
+  imports: [CommonModule, ReactiveFormsModule, MatButton, MatTableModule, MatFormFieldModule, MatInputModule],
   template: `
     <section class="container">
       <h2>Consultas</h2>
@@ -15,9 +19,13 @@ import { QueriesFacade } from '../state/queries.facade';
         <article class="card">
           <h3>Estatísticas por código</h3>
           <form [formGroup]="statsForm" (ngSubmit)="onStatsSubmit()">
-            <label for="code">Código</label>
-            <input id="code" class="input" type="text" formControlName="code" maxlength="5" pattern="^[A-Za-z0-9]{5}$" placeholder="ABCDE" required />
-            <button class="btn" [disabled]="facade.statsLoading() || statsForm.invalid">Buscar</button>
+            <div class="form-row">
+              <mat-form-field appearance="outline" class="w-full max-w-72">
+                <mat-label>Código</mat-label>
+                <input id="code" matInput type="text" formControlName="code" maxlength="5" pattern="^[A-Za-z0-9]{5}$" placeholder="ABCDE" required />
+              </mat-form-field>
+              <button [matButton]="'filled'" class="rounded-full" type="submit" [disabled]="facade.statsLoading() || statsForm.invalid">Buscar</button>
+            </div>
           </form>
 
           <div class="error" *ngIf="facade.statsError() as err">{{ err }}</div>
@@ -56,7 +64,7 @@ import { QueriesFacade } from '../state/queries.facade';
         <article class="card">
           <div class="row">
             <h3>Ranking de códigos mais acessados</h3>
-            <button class="btn ghost" (click)="reloadRanking()" [disabled]="facade.rankingLoading()">Recarregar</button>
+            <button [matButton]="'outlined'" class="rounded-full" (click)="reloadRanking()" [disabled]="facade.rankingLoading()">Recarregar</button>
           </div>
 
           <div class="loading" *ngIf="facade.rankingLoading()" aria-live="polite">Recarregando...</div>
@@ -67,24 +75,27 @@ import { QueriesFacade } from '../state/queries.facade';
             <ng-container *ngIf="!facade.rankingError()">
               <ng-container *ngIf="facade.ranking() as items">
                 <ng-container *ngIf="items.length > 0; else emptyRanking">
-                  <table class="table">
-                    <thead>
-                      <tr>
-                        <th>#</th>
-                        <th>Código</th>
-                        <th>URL curta</th>
-                        <th>Original</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      <tr *ngFor="let item of items; let i = index; trackBy: trackByCode">
-                        <td>{{ i + 1 }}</td>
-                        <td class="code">{{ item.code }}</td>
-                        <td class="truncate"><a [href]="backendOrigin + '/' + item.code" target="_blank" rel="noopener">{{ backendOrigin + '/' + item.code }}</a></td>
-                        <td class="truncate"><a [href]="item.originalUrl" target="_blank" rel="noopener">{{ item.originalUrl }}</a></td>
-                      </tr>
-                    </tbody>
-                  </table>
+                  <mat-table [dataSource]="items" class="mt-2">
+                    <ng-container matColumnDef="position">
+                      <th mat-header-cell *matHeaderCellDef>#</th>
+                      <td mat-cell *matCellDef="let item; let i = index">{{ i + 1 }}</td>
+                    </ng-container>
+                    <ng-container matColumnDef="code">
+                      <th mat-header-cell *matHeaderCellDef>Código</th>
+                      <td mat-cell *matCellDef="let item" class="code">{{ item.code }}</td>
+                    </ng-container>
+                    <ng-container matColumnDef="shortUrl">
+                      <th mat-header-cell *matHeaderCellDef>URL curta</th>
+                      <td mat-cell *matCellDef="let item" class="truncate"><a [href]="backendOrigin + '/' + item.code" target="_blank" rel="noopener">{{ backendOrigin + '/' + item.code }}</a></td>
+                    </ng-container>
+                    <ng-container matColumnDef="originalUrl">
+                      <th mat-header-cell *matHeaderCellDef>Original</th>
+                      <td mat-cell *matCellDef="let item" class="truncate"><a [href]="item.originalUrl" target="_blank" rel="noopener">{{ item.originalUrl }}</a></td>
+                    </ng-container>
+
+                    <tr mat-header-row *matHeaderRowDef="displayedColumnsRanking"></tr>
+                    <tr mat-row *matRowDef="let row; columns: displayedColumnsRanking"></tr>
+                  </mat-table>
                 </ng-container>
               </ng-container>
               <ng-template #emptyRanking>
@@ -104,8 +115,8 @@ import { QueriesFacade } from '../state/queries.facade';
               </select>
             </label>
             <div class="pager">
-              <button class="btn ghost" (click)="prevPage()" [disabled]="facade.statsPageLoading() || facade.statsPage()?.first">Anterior</button>
-              <button class="btn ghost" (click)="nextPage()" [disabled]="facade.statsPageLoading() || facade.statsPage()?.last">Próxima</button>
+              <button [matButton]="'outlined'" class="rounded-full" (click)="prevPage()" [disabled]="facade.statsPageLoading() || facade.statsPage()?.first">Anterior</button>
+              <button [matButton]="'outlined'" class="rounded-full" (click)="nextPage()" [disabled]="facade.statsPageLoading() || facade.statsPage()?.last">Próxima</button>
             </div>
           </div>
 
@@ -115,24 +126,27 @@ import { QueriesFacade } from '../state/queries.facade';
           <ng-container *ngIf="!facade.statsPageLoading() && !facade.statsPageError()">
             <ng-container *ngIf="facade.statsPage() as page">
               <ng-container *ngIf="!page.empty; else emptyStats">
-                <table class="table">
-                  <thead>
-                    <tr>
-                      <th>#</th>
-                      <th>Código</th>
-                      <th>Original</th>
-                      <th class="numeric">Acessos</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    <tr *ngFor="let s of page.content; let i = index; trackBy: trackByCode">
-                      <td>{{ i + 1 }}</td>
-                      <td>{{ s.code }}</td>
-                      <td class="truncate"><a [href]="s.originalUrl" target="_blank" rel="noopener">{{ s.originalUrl }}</a></td>
-                      <td class="numeric">{{ s.hits }}</td>
-                    </tr>
-                  </tbody>
-                </table>
+                <mat-table [dataSource]="page.content" class="mt-2">
+                  <ng-container matColumnDef="position">
+                    <th mat-header-cell *matHeaderCellDef>#</th>
+                    <td mat-cell *matCellDef="let s; let i = index">{{ i + 1 }}</td>
+                  </ng-container>
+                  <ng-container matColumnDef="code">
+                    <th mat-header-cell *matHeaderCellDef>Código</th>
+                    <td mat-cell *matCellDef="let s">{{ s.code }}</td>
+                  </ng-container>
+                  <ng-container matColumnDef="originalUrl">
+                    <th mat-header-cell *matHeaderCellDef>Original</th>
+                    <td mat-cell *matCellDef="let s" class="truncate"><a [href]="s.originalUrl" target="_blank" rel="noopener">{{ s.originalUrl }}</a></td>
+                  </ng-container>
+                  <ng-container matColumnDef="hits">
+                    <th mat-header-cell *matHeaderCellDef class="numeric">Acessos</th>
+                    <td mat-cell *matCellDef="let s" class="numeric">{{ s.hits }}</td>
+                  </ng-container>
+
+                  <tr mat-header-row *matHeaderRowDef="displayedColumnsStatsPage"></tr>
+                  <tr mat-row *matRowDef="let row; columns: displayedColumnsStatsPage"></tr>
+                </mat-table>
                 <p class="muted">Página {{ page.number + 1 }} de {{ page.totalPages }} — {{ page.totalElements }} registro(s)</p>
                 <p class="muted">As informações exibidas referem-se às últimas inseridas na base.</p>
               </ng-container>
@@ -147,10 +161,13 @@ import { QueriesFacade } from '../state/queries.facade';
   `,
   styles: [
     `.container{max-width:960px;margin:24px auto;padding:16px}`,
-    `.cards{display:grid;grid-template-columns:1fr;gap:16px}@media(min-width:720px){.cards{grid-template-columns:1fr 1fr}}`,
+    `.cards{display:grid;grid-template-columns:1fr;gap:16px}`,
     `.card{background:#fff;border:1px solid #e5e7eb;border-radius:8px;padding:16px}`,
+    `.container h2{font-size:24px;font-weight:700;margin-bottom:16px;border-left:6px solid #3f51b5;padding-left:10px}`,
+    `.card h3{font-size:18px;font-weight:700;margin:0 0 12px;border-left:4px solid #3f51b5;padding-left:8px}`,
     `.card form .btn{margin-top:6px}`,
     `.row{display:flex;align-items:center;justify-content:space-between}`,
+    `.form-row{display:flex;gap:12px;align-items:flex-start;flex-wrap:wrap}`,
     `.controls{display:flex;gap:12px;align-items:center}`,
     `.pager{display:flex;gap:8px}`,
     `.input{width:100%;max-width:280px;box-sizing:border-box;padding:8px;margin:4px 0}`,
@@ -160,6 +177,7 @@ import { QueriesFacade } from '../state/queries.facade';
     `.loading{color:#6b7280;margin-top:8px}`,
     `.muted{color:#6b7280;margin-top:8px}`,
     `.result{background:#f6f8fa;padding:12px;margin-top:12px;border-radius:6px}`,
+    `.result p strong{margin-right:6px}`,
     `.ranking{margin:8px 0;padding-left:20px}`,
     `.ranking li{display:flex;gap:8px;align-items:center;padding:4px 0}`,
     `.code{font-weight:600}`,
@@ -169,11 +187,17 @@ import { QueriesFacade } from '../state/queries.facade';
     `.table th.numeric,.table td.numeric{text-align:right}`,
     `.truncate{max-width:380px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}`,
     `.summary{margin-top:8px}`,
+    `.summary .table{display:inline-table;width:auto}`,
+    `.summary .table th,.summary .table td{padding:6px 8px;white-space:nowrap}`,
+    `.summary .table th.numeric,.summary .table td.numeric{text-align:left}`,
     `.kpis{display:flex;gap:16px;margin:8px 0}`,
     `.kpi{background:#f6f8fa;border:1px solid #e5e7eb;border-radius:6px;padding:8px 12px}`,
     `.kpi .label{display:block;color:#6b7280;font-size:12px}`,
     `.kpi .value{display:block;font-size:18px;font-weight:600}`,
-    `.title-nowrap{white-space:nowrap}`
+    `.kpi .value{text-align:right}`,
+    `.title-nowrap{white-space:nowrap}`,
+    `.kpi .value{text-align:center}`,
+    `.summary .table th.numeric,.summary .table td.numeric{text-align:right}`
   ],
   changeDetection: ChangeDetectionStrategy.OnPush
 })
@@ -197,6 +221,9 @@ export default class QueriesPageComponent implements OnInit, OnDestroy {
   });
 
   readonly pageSizeOptions = [10, 20, 30, 40, 50] as const;
+
+  readonly displayedColumnsRanking = ['position', 'code', 'shortUrl', 'originalUrl'] as const;
+  readonly displayedColumnsStatsPage = ['position', 'code', 'originalUrl', 'hits'] as const;
 
   private rankingIntervalId: any | number | undefined;
 
