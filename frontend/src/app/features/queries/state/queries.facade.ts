@@ -72,7 +72,6 @@ export class QueriesFacade {
   async fetchStats(code: string): Promise<void> {
     this._statsLoading.set(true);
     this._statsError.set(null);
-    this._stats.set(null);
     try {
       const res = await this.statsAdapter.getCodeSummary(code);
       this._stats.set(res);
@@ -92,7 +91,6 @@ export class QueriesFacade {
 
     this._statsPageLoading.set(true);
     this._statsPageError.set(null);
-    this._statsPage.set(null);
     try {
       const res = await this.statsAdapter.list(pageNumber, pageSize);
       this._statsPage.set(res);
@@ -130,7 +128,6 @@ export class QueriesFacade {
   async fetchRanking(): Promise<void> {
     this._rankingLoading.set(true);
     this._rankingError.set(null);
-    this._ranking.set([]);
     try {
       const res = await this.rankingAdapter.list();
       this._ranking.set(res);

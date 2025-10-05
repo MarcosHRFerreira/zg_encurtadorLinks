@@ -64,18 +64,18 @@ import { MatInputModule } from '@angular/material/input';
         <article class="card">
           <div class="row">
             <h3>Ranking de códigos mais acessados</h3>
-            <button [matButton]="'outlined'" class="rounded-full" (click)="reloadRanking()" [disabled]="facade.rankingLoading()">Recarregar</button>
+            <div class="row-actions">
+              <button [matButton]="'outlined'" class="rounded-full" (click)="reloadRanking()" [disabled]="facade.rankingLoading()">Recarregar</button>
+              <span class="loading inline" *ngIf="facade.rankingLoading()" aria-live="polite">Atualizando...</span>
+            </div>
           </div>
 
-          <div class="loading" *ngIf="facade.rankingLoading()" aria-live="polite">Recarregando...</div>
+          <div class="error" *ngIf="facade.rankingError() as err">{{ err }}</div>
 
-          <ng-container *ngIf="!facade.rankingLoading()">
-            <div class="error" *ngIf="facade.rankingError() as err">{{ err }}</div>
-
-            <ng-container *ngIf="!facade.rankingError()">
-              <ng-container *ngIf="facade.ranking() as items">
-                <ng-container *ngIf="items.length > 0; else emptyRanking">
-                  <mat-table [dataSource]="items" class="mt-2">
+          <ng-container *ngIf="!facade.rankingError()">
+            <ng-container *ngIf="facade.ranking() as items">
+              <ng-container *ngIf="items.length > 0; else emptyRanking">
+                <mat-table [dataSource]="items" class="mt-2">
                     <ng-container matColumnDef="position">
                       <th mat-header-cell *matHeaderCellDef>#</th>
                       <td mat-cell *matCellDef="let item; let i = index">{{ i + 1 }}</td>
@@ -120,10 +120,10 @@ import { MatInputModule } from '@angular/material/input';
             </div>
           </div>
 
-          <div class="loading" *ngIf="facade.statsPageLoading()" aria-live="polite">Carregando...</div>
+          
           <div class="error" *ngIf="facade.statsPageError() as err">{{ err }}</div>
 
-          <ng-container *ngIf="!facade.statsPageLoading() && !facade.statsPageError()">
+          <ng-container *ngIf="!facade.statsPageError()">
             <ng-container *ngIf="facade.statsPage() as page">
               <ng-container *ngIf="!page.empty; else emptyStats">
                 <mat-table [dataSource]="page.content" class="mt-2">
@@ -169,6 +169,8 @@ import { MatInputModule } from '@angular/material/input';
     `.row{display:flex;align-items:center;justify-content:space-between}`,
     `.form-row{display:flex;gap:12px;align-items:flex-start;flex-wrap:wrap}`,
     `.controls{display:flex;gap:12px;align-items:center}`,
+    `.row-actions{display:flex;gap:8px;align-items:center}`,
+    `.loading.inline{display:inline-block;margin-left:8px}`,
     `.pager{display:flex;gap:8px}`,
     `.input{width:100%;max-width:280px;box-sizing:border-box;padding:8px;margin:4px 0}`,
     `.btn{padding:8px 12px;margin-top:8px;cursor:pointer}`,
@@ -225,7 +227,7 @@ export default class QueriesPageComponent implements OnInit, OnDestroy {
   readonly displayedColumnsRanking = ['position', 'code', 'shortUrl', 'originalUrl'] as const;
   readonly displayedColumnsStatsPage = ['position', 'code', 'originalUrl', 'hits'] as const;
 
-  private rankingIntervalId: any | number | undefined;
+  // Auto-refresh de ranking removido para evitar sensação de "refresh" contínuo na tela
 
   ngOnInit(): void {
     // Limpa estado da estatística por código ao entrar na tela
@@ -234,19 +236,13 @@ export default class QueriesPageComponent implements OnInit, OnDestroy {
     void this.facade.fetchRanking();
     void this.facade.fetchStatsPage();
 
-    // Auto-recarrega ranking a cada 1 minuto
-    this.rankingIntervalId = setInterval(() => {
-      void this.facade.fetchRanking();
-    }, 60_000);
+    // Auto-recarregamento desativado; o ranking é atualizado no carregamento inicial
+    // e pode ser recarregado manualmente pelo botão "Recarregar".
   }
 
   ngOnDestroy(): void {
     // Garante limpeza ao sair da tela (troca de rota)
     this.facade.resetStats();
-    if (this.rankingIntervalId) {
-      clearInterval(this.rankingIntervalId as number);
-      this.rankingIntervalId = undefined;
-    }
   }
 
   async onStatsSubmit(): Promise<void> {
