@@ -45,18 +45,20 @@ import { MatInputModule } from '@angular/material/input';
                     <th class="numeric">Acessos</th>
                   </tr>
                 </thead>
-                <ng-container *ngIf="dailyWithHits(s).length > 0; else emptyDaily">
+                <tbody *ngIf="dailyWithHits(s).length > 0; else emptyDaily">
+                  <tr *ngFor="let d of dailyWithHitsSorted(s)">
+                    <td>{{ d.date | date:'dd/MM/yyyy' }}</td>
+                    <td class="numeric">{{ d.hits }}</td>
+                  </tr>
+                </tbody>
+                <ng-template #emptyDaily>
                   <tbody>
-                    <tr *ngFor="let d of dailyWithHitsSorted(s)">
-                      <td>{{ d.date | date:'dd/MM/yyyy' }}</td>
-                      <td class="numeric">{{ d.hits }}</td>
+                    <tr>
+                      <td colspan="2"><p class="muted">Sem acessos nos últimos 7 dias</p></td>
                     </tr>
                   </tbody>
-                </ng-container>
+                </ng-template>
               </table>
-              <ng-template #emptyDaily>
-                <p class="muted">Sem acessos nos últimos 7 dias</p>
-              </ng-template>
             </div>
           </div>
         </article>
@@ -102,7 +104,6 @@ import { MatInputModule } from '@angular/material/input';
                 <p class="muted">Sem itens no ranking ainda</p>
               </ng-template>
             </ng-container>
-          </ng-container>
         </article>
 
         <article class="card">
