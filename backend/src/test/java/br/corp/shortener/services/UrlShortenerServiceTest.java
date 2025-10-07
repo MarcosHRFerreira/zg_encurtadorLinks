@@ -65,6 +65,7 @@ class UrlShortenerServiceTest {
     @Test
     @DisplayName("shorten com código customizado livre deve salvar e retornar")
     void shortenCustomCode_ok() {
+        when(shortUrlRepository.findByCodeAndOriginalUrl("ABCDE", "https://example.com")).thenReturn(Optional.empty());
         when(shortUrlRepository.existsByCode("ABCDE")).thenReturn(false);
         ShortUrl saved = buildShortUrl("https://example.com", "ABCDE");
         when(shortUrlRepository.saveAndFlush(any(ShortUrl.class))).thenReturn(saved);
@@ -74,6 +75,7 @@ class UrlShortenerServiceTest {
         assertNotNull(result);
         assertEquals("ABCDE", result.getCode());
         assertEquals("https://example.com", result.getOriginalUrl());
+        verify(shortUrlRepository, times(1)).findByCodeAndOriginalUrl("ABCDE", "https://example.com");
         verify(shortUrlRepository, times(1)).existsByCode("ABCDE");
         verify(shortUrlRepository, times(1)).saveAndFlush(any(ShortUrl.class));
         verifyNoMoreInteractions(shortUrlRepository);
@@ -83,12 +85,14 @@ class UrlShortenerServiceTest {
     @Test
     @DisplayName("shorten com código customizado já existente deve lançar DuplicateCodeException")
     void shortenCustomCode_duplicate() {
+        when(shortUrlRepository.findByCodeAndOriginalUrl("ABCDE", "https://example.com")).thenReturn(Optional.empty());
         when(shortUrlRepository.existsByCode("ABCDE")).thenReturn(true);
 
         DuplicateCodeException ex = assertThrows(DuplicateCodeException.class,
                 () -> service.shorten("https://example.com", "ABCDE"));
 
         assertTrue(ex.getMessage().contains("ABCDE"));
+        verify(shortUrlRepository, times(1)).findByCodeAndOriginalUrl("ABCDE", "https://example.com");
         verify(shortUrlRepository, times(1)).existsByCode("ABCDE");
         verifyNoMoreInteractions(shortUrlRepository);
         verifyNoInteractions(shortUrlAccessRepository);
@@ -97,6 +101,7 @@ class UrlShortenerServiceTest {
     @Test
     @DisplayName("shorten com código customizado: corrida/violação de unicidade mapeia para DuplicateCodeException")
     void shortenCustomCode_uniqueViolationMapsToDuplicate() {
+        when(shortUrlRepository.findByCodeAndOriginalUrl("ABCD1", "https://ex.com")).thenReturn(Optional.empty());
         when(shortUrlRepository.existsByCode("ABCD1")).thenReturn(false);
         when(shortUrlRepository.saveAndFlush(any(ShortUrl.class)))
                 .thenThrow(new DataIntegrityViolationException("unique_violation"));
@@ -104,6 +109,8 @@ class UrlShortenerServiceTest {
         assertThrows(DuplicateCodeException.class,
                 () -> service.shorten("https://ex.com", "ABCD1"));
 
+        // chamada antes do save (idempotência) e após colisão (corrida)
+        verify(shortUrlRepository, times(2)).findByCodeAndOriginalUrl("ABCD1", "https://ex.com");
         verify(shortUrlRepository).existsByCode("ABCD1");
         verify(shortUrlRepository).saveAndFlush(any(ShortUrl.class));
         verifyNoMoreInteractions(shortUrlRepository);

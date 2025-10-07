@@ -40,6 +40,7 @@ public class UrlShortenerService {
     private final ShortUrlRepository shortUrlRepository;
     private final ShortUrlAccessRepository shortUrlAccessRepository;
     private final TopRankingCache topRankingCache;
+    private ShortUrlCache shortUrlCache; // opcional
 
     public UrlShortenerService(ShortUrlRepository shortUrlRepository, ShortUrlAccessRepository shortUrlAccessRepository, TopRankingCache topRankingCache) {
         this.shortUrlRepository = shortUrlRepository;
@@ -47,40 +48,86 @@ public class UrlShortenerService {
         this.topRankingCache = topRankingCache;
     }
 
+    // Injeta cache de ShortUrl opcionalmente para não quebrar testes/unitários
+    @org.springframework.beans.factory.annotation.Autowired(required = false)
+    public void setShortUrlCache(ShortUrlCache shortUrlCache) {
+        this.shortUrlCache = shortUrlCache;
+    }
+
     @Transactional
     public ShortUrl shorten(String originalUrl, String customCode) {
         log.info("Shorten requested: originalUrl={}, customCodeProvided={}", originalUrl, customCode != null);
         if (customCode != null) {
-            if (shortUrlRepository.existsByCode(customCode)) {
-                log.warn("Duplicate custom code detected: {}", customCode);
+            // Idempotência: se o par (code, originalUrl) já existe, retorna como incluído
+            ShortUrl existingPair = shortUrlCache != null
+                    ? shortUrlCache.getByPair(customCode, originalUrl).orElse(null)
+                    : null;
+            if (existingPair == null) {
+                existingPair = shortUrlRepository.findByCodeAndOriginalUrl(customCode, originalUrl).orElse(null);
+                if (existingPair != null) {
+                    putAfterCommit(existingPair);
+                }
+            }
+            if (existingPair != null) {
+                log.info("Existing pair found for custom code: {} -> {}. Returning as created.", customCode, originalUrl);
+                return existingPair;
+            }
+
+            // Colisão real: código em uso para outra URL
+            boolean codeInUse = topRankingCache.containsCode(customCode)
+                    || (shortUrlCache != null && shortUrlCache.containsCode(customCode))
+                    || shortUrlRepository.existsByCode(customCode);
+            if (codeInUse) {
+                log.warn("Duplicate custom code detected (different URL): {}", customCode);
                 throw new DuplicateCodeException(customCode);
             }
-            if (topRankingCache.containsCode(customCode)) {
-                log.warn("Duplicate custom code detected in cache: {}", customCode);
-                throw new DuplicateCodeException(customCode);
-            }
+
             final ShortUrl candidate = new ShortUrl(originalUrl, customCode, Instant.now());
             try {
                 final ShortUrl saved = shortUrlRepository.saveAndFlush(candidate);
                 log.info("Shorten created with custom code: {} -> {}", saved.getCode(), saved.getOriginalUrl());
+                putAfterCommit(saved);
                 return saved;
             } catch (DataIntegrityViolationException e) {
-                // Corrida entre instâncias: mapeia para 409
-                log.warn("DataIntegrityViolation on custom code {}. Mapping to DuplicateCodeException.", customCode, e);
+                // Corrida entre instâncias: tenta recuperar o par e retornar como criado
+                ShortUrl raced = shortUrlRepository.findByCodeAndOriginalUrl(customCode, originalUrl).orElse(null);
+                if (raced != null) {
+                    log.info("Race detected and resolved for custom code: {} -> {}. Returning existing.", customCode, originalUrl);
+                    putAfterCommit(raced);
+                    return raced;
+                }
+                log.warn("DataIntegrityViolation on custom code {} without matching pair.", customCode, e);
                 throw new DuplicateCodeException(customCode);
             }
+        }
+
+        // Idempotência: sem código, retorna existente por URL se já houver
+        ShortUrl existingByUrl = shortUrlCache != null
+                ? shortUrlCache.getByUrl(originalUrl).orElse(null)
+                : null;
+        if (existingByUrl == null) {
+            existingByUrl = shortUrlRepository.findFirstByOriginalUrlOrderByCreatedAtDesc(originalUrl).orElse(null);
+            if (existingByUrl != null) {
+                putAfterCommit(existingByUrl);
+            }
+        }
+        if (existingByUrl != null) {
+            log.info("Existing entry found for originalUrl {}. Returning as created.", originalUrl);
+            return existingByUrl;
         }
 
         final int maxAttempts = 5;
         for (int attempt = 0; attempt < maxAttempts; attempt++) {
             final String code = generateRandomCode();
             log.debug("Attempt {} generating random code: {}", attempt + 1, code);
-            // Primeiro valida no cache
-            if (topRankingCache.containsCode(code)) {
+            // Primeiro valida no cache/TopRanking
+            boolean inCache = topRankingCache.containsCode(code)
+                    || (shortUrlCache != null && shortUrlCache.containsCode(code));
+            if (inCache) {
                 log.debug("Generated code {} is present in cache; retrying", code);
                 continue;
             }
-            // Se não estiver no cache, valida existência no banco
+            // Fallback: valida existência no banco
             if (shortUrlRepository.existsByCode(code)) {
                 log.debug("Generated code {} already exists in database; retrying", code);
                 continue;
@@ -89,10 +136,17 @@ public class UrlShortenerService {
             try {
                 final ShortUrl saved = shortUrlRepository.saveAndFlush(candidate);
                 log.info("Shorten created with generated code: {} -> {}", saved.getCode(), saved.getOriginalUrl());
+                putAfterCommit(saved);
                 return saved;
             } catch (DataIntegrityViolationException e) {
-                // Colisão de unicidade: tenta novamente com outro código
-                log.warn("Collision detected for code {}. Retrying.", code);
+                // Colisão de unicidade: se o par existir, retorna como criado; senão tenta outro código
+                ShortUrl raced = shortUrlRepository.findByCodeAndOriginalUrl(code, originalUrl).orElse(null);
+                if (raced != null) {
+                    log.info("Race detected and resolved for generated code: {} -> {}. Returning existing.", code, originalUrl);
+                    putAfterCommit(raced);
+                    return raced;
+                }
+                log.warn("Collision detected for code {} without matching pair. Retrying.", code);
             }
         }
         log.error("Failed to generate a unique code after {} attempts", maxAttempts);
@@ -225,6 +279,28 @@ public class UrlShortenerService {
                 .mapToObj(ALPHABET::charAt)
                 .collect(StringBuilder::new, StringBuilder::append, StringBuilder::append)
                 .toString();
+    }
+
+    private void putAfterCommit(ShortUrl su) {
+        if (shortUrlCache == null) return;
+        if (TransactionSynchronizationManager.isSynchronizationActive()) {
+            TransactionSynchronizationManager.registerSynchronization(new TransactionSynchronization() {
+                @Override
+                public void afterCommit() {
+                    try {
+                        shortUrlCache.put(su);
+                    } catch (Exception e) {
+                        log.warn("Failed to update ShortUrl cache after commit for code={}: {}", su.getCode(), e.getMessage());
+                    }
+                }
+            });
+        } else {
+            try {
+                shortUrlCache.put(su);
+            } catch (Exception e) {
+                log.warn("Failed to update ShortUrl cache for code={}: {}", su.getCode(), e.getMessage());
+            }
+        }
     }
 
     private String safe(String s) {

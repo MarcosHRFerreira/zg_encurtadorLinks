@@ -21,7 +21,6 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
-import java.time.*;
 
 @RestController
 @Tag(name = "Estatísticas", description = "Endpoints para consulta de estatísticas")

@@ -4,7 +4,12 @@ import jakarta.persistence.*;
 import java.time.Instant;
 
 @Entity
-@Table(name = "short_urls")
+@Table(
+    name = "short_urls",
+    uniqueConstraints = {
+        @UniqueConstraint(name = "uk_code_original", columnNames = {"code", "original_url"})
+    }
+)
 public class ShortUrl {
 
     @Id

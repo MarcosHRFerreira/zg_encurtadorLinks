@@ -1,0 +1,88 @@
+<mxfile host="app.diagrams.net" agent="Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/141.0.0.0 Safari/537.36" version="28.2.5">
+  <diagram id="shorten-flow" name="Shorten Flow">
+    <mxGraphModel dx="1281" dy="527" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="1100" pageHeight="850" math="0" shadow="0">
+      <root>
+        <mxCell id="0" />
+        <mxCell id="1" parent="0" />
+        <mxCell id="v1" value="Client" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#dae8fc;strokeColor=#6c8ebf" parent="1" vertex="1">
+          <mxGeometry x="40" y="40" width="160" height="60" as="geometry" />
+        </mxCell>
+        <mxCell id="v2" value="LinkController.shorten" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#fff2cc;strokeColor=#d6b656" parent="1" vertex="1">
+          <mxGeometry x="280" y="40" width="220" height="60" as="geometry" />
+        </mxCell>
+        <mxCell id="v3" value="UrlShortenerService.shorten" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#d5e8d4;strokeColor=#82b366" parent="1" vertex="1">
+          <mxGeometry x="580" y="40" width="260" height="60" as="geometry" />
+        </mxCell>
+        <mxCell id="v4" value="Custom code provided?" style="rhombus;whiteSpace=wrap;html=1;fillColor=#f8cecc;strokeColor=#b85450" parent="1" vertex="1">
+          <mxGeometry x="610" y="190" width="200" height="80" as="geometry" />
+        </mxCell>
+        <mxCell id="v5" value="existsByCode | cache.containsCode" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#f5f5f5;strokeColor=#666666" parent="1" vertex="1">
+          <mxGeometry x="980" y="200" width="240" height="60" as="geometry" />
+        </mxCell>
+        <mxCell id="v6" value="409 Conflict (DuplicateCodeException)" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#f8cecc;strokeColor=#b85450" parent="1" vertex="1">
+          <mxGeometry x="1390" y="200" width="260" height="60" as="geometry" />
+        </mxCell>
+        <mxCell id="v7" value="saveAndFlush(ShortUrl)" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#e1d5e7;strokeColor=#9673a6" parent="1" vertex="1">
+          <mxGeometry x="1000" y="500" width="220" height="60" as="geometry" />
+        </mxCell>
+        <mxCell id="v8" value="Generate random code (max 5 attempts)" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#f5f5f5;strokeColor=#666666" parent="1" vertex="1">
+          <mxGeometry x="580" y="310" width="260" height="60" as="geometry" />
+        </mxCell>
+        <mxCell id="v9" value="DataIntegrityViolation ➜ retry / duplicate" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffe6cc;strokeColor=#d79b00" parent="1" vertex="1">
+          <mxGeometry x="580" y="410" width="280" height="60" as="geometry" />
+        </mxCell>
+        <mxCell id="v10" value="201 Created + ShortenResponse" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#d5e8d4;strokeColor=#82b366" parent="1" vertex="1">
+          <mxGeometry x="380" y="600" width="240" height="60" as="geometry" />
+        </mxCell>
+        <mxCell id="v11" value="Location header: /{code}\nFull URL via ServletUriComponentsBuilder" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#dae8fc;strokeColor=#6c8ebf" parent="1" vertex="1">
+          <mxGeometry x="320" y="800" width="360" height="80" as="geometry" />
+        </mxCell>
+        <mxCell id="e1" value="POST /shorten" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;endArrow=block;dashed=0;strokeColor=#6c8ebf" parent="1" source="v1" target="v2" edge="1">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="e2" value="validate DTO" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;endArrow=block;dashed=0;strokeColor=#d6b656" parent="1" source="v2" target="v3" edge="1">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="e3" value="decide" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;endArrow=block;dashed=0;strokeColor=#82b366" parent="1" source="v3" target="v4" edge="1">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="e4" value="Yes" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;endArrow=block;dashed=0;strokeColor=#b85450" parent="1" source="v4" target="v5" edge="1">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="e5" value="duplicate?" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;endArrow=block;dashed=0;strokeColor=#b85450" parent="1" source="v5" target="v6" edge="1">
+          <mxGeometry x="-0.0769" y="20" relative="1" as="geometry">
+            <mxPoint x="1030" y="280" as="targetPoint" />
+            <Array as="points">
+              <mxPoint x="1310" y="230" />
+              <mxPoint x="1310" y="230" />
+            </Array>
+            <mxPoint as="offset" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="e6" value="no duplicate" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;endArrow=block;dashed=0;strokeColor=#9673a6;exitX=0.5;exitY=1;exitDx=0;exitDy=0;" parent="1" source="v5" edge="1">
+          <mxGeometry relative="1" as="geometry">
+            <mxPoint x="1010" y="250" as="sourcePoint" />
+            <mxPoint x="1100" y="500" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="e7" value="No" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;endArrow=block;dashed=0;strokeColor=#666666" parent="1" source="v4" target="v8" edge="1">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="e8" value="attempts" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;endArrow=block;dashed=0;strokeColor=#9673a6;exitX=1;exitY=0.5;exitDx=0;exitDy=0;" parent="1" source="v8" edge="1">
+          <mxGeometry relative="1" as="geometry">
+            <mxPoint x="770" y="345" as="sourcePoint" />
+            <mxPoint x="1040" y="500" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="e9" value="build response" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;endArrow=block;dashed=0;strokeColor=#82b366" parent="1" source="v7" target="v10" edge="1">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="e10" value="set Location" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;endArrow=block;dashed=0;strokeColor=#6c8ebf" parent="1" source="v10" edge="1">
+          <mxGeometry relative="1" as="geometry">
+            <mxPoint x="500" y="800" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+      </root>
+    </mxGraphModel>
+  </diagram>
+</mxfile>
