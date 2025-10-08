@@ -57,19 +57,21 @@ public class UrlShortenerService {
     @Transactional
     public ShortUrl shorten(String originalUrl, String customCode) {
         log.info("Shorten requested: originalUrl={}, customCodeProvided={}", originalUrl, customCode != null);
+        // Valida e normaliza URL de entrada para mitigar open redirect/CRLF e tamanhos excessivos
+        final String safeOriginalUrl = validateAndNormalizeUrl(originalUrl);
         if (customCode != null) {
             // Idempotência: se o par (code, originalUrl) já existe, retorna como incluído
             ShortUrl existingPair = shortUrlCache != null
-                    ? shortUrlCache.getByPair(customCode, originalUrl).orElse(null)
+                    ? shortUrlCache.getByPair(customCode, safeOriginalUrl).orElse(null)
                     : null;
             if (existingPair == null) {
-                existingPair = shortUrlRepository.findByCodeAndOriginalUrl(customCode, originalUrl).orElse(null);
+                existingPair = shortUrlRepository.findByCodeAndOriginalUrl(customCode, safeOriginalUrl).orElse(null);
                 if (existingPair != null) {
                     putAfterCommit(existingPair);
                 }
             }
             if (existingPair != null) {
-                log.info("Existing pair found for custom code: {} -> {}. Returning as created.", customCode, originalUrl);
+                log.info("Existing pair found for custom code: {} -> {}. Returning as created.", customCode, safeOriginalUrl);
                 return existingPair;
             }
 
@@ -82,7 +84,7 @@ public class UrlShortenerService {
                 throw new DuplicateCodeException(customCode);
             }
 
-            final ShortUrl candidate = new ShortUrl(originalUrl, customCode, Instant.now());
+            final ShortUrl candidate = new ShortUrl(safeOriginalUrl, customCode, Instant.now());
             try {
                 final ShortUrl saved = shortUrlRepository.saveAndFlush(candidate);
                 log.info("Shorten created with custom code: {} -> {}", saved.getCode(), saved.getOriginalUrl());
@@ -90,9 +92,9 @@ public class UrlShortenerService {
                 return saved;
             } catch (DataIntegrityViolationException e) {
                 // Corrida entre instâncias: tenta recuperar o par e retornar como criado
-                ShortUrl raced = shortUrlRepository.findByCodeAndOriginalUrl(customCode, originalUrl).orElse(null);
+                ShortUrl raced = shortUrlRepository.findByCodeAndOriginalUrl(customCode, safeOriginalUrl).orElse(null);
                 if (raced != null) {
-                    log.info("Race detected and resolved for custom code: {} -> {}. Returning existing.", customCode, originalUrl);
+                    log.info("Race detected and resolved for custom code: {} -> {}. Returning existing.", customCode, safeOriginalUrl);
                     putAfterCommit(raced);
                     return raced;
                 }
@@ -103,16 +105,16 @@ public class UrlShortenerService {
 
         // Idempotência: sem código, retorna existente por URL se já houver
         ShortUrl existingByUrl = shortUrlCache != null
-                ? shortUrlCache.getByUrl(originalUrl).orElse(null)
+                ? shortUrlCache.getByUrl(safeOriginalUrl).orElse(null)
                 : null;
         if (existingByUrl == null) {
-            existingByUrl = shortUrlRepository.findFirstByOriginalUrlOrderByCreatedAtDesc(originalUrl).orElse(null);
+            existingByUrl = shortUrlRepository.findFirstByOriginalUrlOrderByCreatedAtDesc(safeOriginalUrl).orElse(null);
             if (existingByUrl != null) {
                 putAfterCommit(existingByUrl);
             }
         }
         if (existingByUrl != null) {
-            log.info("Existing entry found for originalUrl {}. Returning as created.", originalUrl);
+            log.info("Existing entry found for originalUrl {}. Returning as created.", safeOriginalUrl);
             return existingByUrl;
         }
 
@@ -132,7 +134,7 @@ public class UrlShortenerService {
                 log.debug("Generated code {} already exists in database; retrying", code);
                 continue;
             }
-            final ShortUrl candidate = new ShortUrl(originalUrl, code, Instant.now());
+            final ShortUrl candidate = new ShortUrl(safeOriginalUrl, code, Instant.now());
             try {
                 final ShortUrl saved = shortUrlRepository.saveAndFlush(candidate);
                 log.info("Shorten created with generated code: {} -> {}", saved.getCode(), saved.getOriginalUrl());
@@ -140,9 +142,9 @@ public class UrlShortenerService {
                 return saved;
             } catch (DataIntegrityViolationException e) {
                 // Colisão de unicidade: se o par existir, retorna como criado; senão tenta outro código
-                ShortUrl raced = shortUrlRepository.findByCodeAndOriginalUrl(code, originalUrl).orElse(null);
+                ShortUrl raced = shortUrlRepository.findByCodeAndOriginalUrl(code, safeOriginalUrl).orElse(null);
                 if (raced != null) {
-                    log.info("Race detected and resolved for generated code: {} -> {}. Returning existing.", code, originalUrl);
+                    log.info("Race detected and resolved for generated code: {} -> {}. Returning existing.", code, safeOriginalUrl);
                     putAfterCommit(raced);
                     return raced;
                 }
@@ -307,5 +309,59 @@ public class UrlShortenerService {
         if (s == null) return null;
         final int max = 200;
         return s.length() > max ? s.substring(0, max) + "…" : s;
+    }
+
+    /**
+     * Valida e normaliza a URL original.
+     * Regras:
+     * - Remove espaços em branco
+     * - Tamanho máximo 2048 caracteres
+     * - Proíbe CR/LF para evitar HTTP Response Splitting
+     * - Exige esquemas http/https e host presente
+     */
+    private String validateAndNormalizeUrl(String originalUrl) {
+        if (originalUrl == null) {
+            throw new IllegalArgumentException("url é obrigatória");
+        }
+        String trimmed = originalUrl.trim();
+        if (trimmed.isEmpty()) {
+            throw new IllegalArgumentException("url é obrigatória");
+        }
+        if (trimmed.length() > 2048) {
+            throw new IllegalArgumentException("url muito longa (máx. 2048)");
+        }
+        if (trimmed.indexOf('\r') >= 0 || trimmed.indexOf('\n') >= 0) {
+            throw new IllegalArgumentException("url inválida");
+        }
+        java.net.URI uri;
+        try {
+            uri = java.net.URI.create(trimmed);
+        } catch (IllegalArgumentException e) {
+            throw new IllegalArgumentException("url inválida");
+        }
+        String scheme = uri.getScheme();
+        if (scheme == null || !(scheme.equalsIgnoreCase("http") || scheme.equalsIgnoreCase("https"))) {
+            throw new IllegalArgumentException("url deve usar http ou https");
+        }
+        // Em alguns casos, URI permite sem host; exigimos host para evitar redirecionamentos estranhos
+        if (uri.getHost() == null) {
+            throw new IllegalArgumentException("url inválida (host ausente)");
+        }
+        // Normaliza removendo fragmento e mantendo query
+        try {
+            java.net.URI normalized = new java.net.URI(
+                    uri.getScheme(),
+                    uri.getUserInfo(),
+                    uri.getHost(),
+                    uri.getPort(),
+                    uri.getPath(),
+                    uri.getQuery(),
+                    null // sem fragmento
+            );
+            return normalized.toString();
+        } catch (Exception _e) {
+            // Fallback: retorna original aparado
+            return trimmed;
+        }
     }
 }

@@ -111,8 +111,9 @@ public class LinkController {
             service.registerAccess(su, ua, referer);
             log.info("Redirecting code={} to {}", code, su.getOriginalUrl());
 
+            // Usa API segura para definir Location evitando cabeçalhos manuais
             return ResponseEntity.status(HttpStatus.FOUND)
-                    .header("Location", su.getOriginalUrl())
+                    .location(URI.create(su.getOriginalUrl()))
                     .build();
         } catch (Exception e) {
             log.error("Redirect error for code={}: {}", code, e.getMessage(), e);
