@@ -27,6 +27,10 @@ services:
     healthCheckPath: /actuator/health/readiness
     autoDeploy: true
     envVars:
+      # Render (Docker) espera que o serviço escute na porta interna 10000
+      # Definimos PORT=10000 para o Spring Boot honrar `${PORT}`
+      - key: PORT
+        value: 10000
       - key: SPRING_DATASOURCE_URL
         sync: false
       - key: SPRING_DATASOURCE_USERNAME
